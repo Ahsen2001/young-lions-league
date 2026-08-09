@@ -1,4 +1,5 @@
 import type { Venue } from "@/types";
+import { createClient } from "@/lib/supabase/client";
 
 export interface CreateVenueDTO {
   name: string;
@@ -27,162 +28,182 @@ export interface PaginatedVenuesResult {
   to: number;
 }
 
-// Seeded dataset simulating venues table in database
-let MOCK_VENUES: Venue[] = [
+const INITIAL_SEED_VENUES = [
   {
-    id: "ven-001",
     name: "Oddamavadi Central Stadium Ground",
     short_name: "Central Pitch",
     location: "Main Street, Oddamavadi",
     capacity: 2500,
-    availability_start: "07:00",
-    availability_end: "18:00",
+    availability_start: "07:00:00",
+    availability_end: "18:00:00",
     is_active: true,
-    created_at: "2025-01-01T10:00:00Z",
-    updated_at: "2025-01-01T10:00:00Z",
   },
   {
-    id: "ven-002",
     name: "Young Lions Youth Sports Complex",
     short_name: "Youth Complex",
     location: "Hospital Road, Oddamavadi",
     capacity: 1200,
-    availability_start: "08:00",
-    availability_end: "19:00",
+    availability_start: "08:00:00",
+    availability_end: "19:00:00",
     is_active: true,
-    created_at: "2025-01-05T10:00:00Z",
-    updated_at: "2025-01-05T10:00:00Z",
   },
   {
-    id: "ven-003",
     name: "Oddamavadi Beachside Football Arena",
     short_name: "Beachside Ground",
     location: "Coastal Road, Oddamavadi",
     capacity: 800,
-    availability_start: "06:00",
-    availability_end: "17:30",
+    availability_start: "06:00:00",
+    availability_end: "17:30:00",
     is_active: true,
-    created_at: "2025-01-10T10:00:00Z",
-    updated_at: "2025-01-10T10:00:00Z",
   },
   {
-    id: "ven-004",
     name: "Oddamavadi National School Field",
     short_name: "School Ground",
     location: "School Avenue, Oddamavadi",
     capacity: 600,
-    availability_start: "14:00",
-    availability_end: "18:00",
+    availability_start: "14:00:00",
+    availability_end: "18:00:00",
     is_active: false,
-    created_at: "2025-01-12T10:00:00Z",
-    updated_at: "2025-01-12T10:00:00Z",
   },
 ];
 
+async function seedInitialVenuesIfEmpty(supabase: any) {
+  try {
+    const { count } = await (supabase.from("venues") as any)
+      .select("id", { count: "exact", head: true });
+
+    if (count === 0) {
+      await (supabase.from("venues") as any).insert(INITIAL_SEED_VENUES);
+    }
+  } catch (err) {
+    console.warn("Auto-seeding venues check skipped:", err);
+  }
+}
+
 /**
- * Server/Database Paginated Venue query function.
+ * Server/Database Paginated Venue query function using Supabase.
  */
 export async function fetchVenues(
   params?: FetchVenuesParams
 ): Promise<PaginatedVenuesResult> {
+  const supabase = createClient();
+  await seedInitialVenuesIfEmpty(supabase);
+
   const page = Math.max(1, params?.page || 1);
   const pageSize = Math.max(1, params?.pageSize || 10);
 
-  let filtered = [...MOCK_VENUES];
+  let query: any = (supabase.from("venues") as any).select("*", { count: "exact" });
 
-  // 1. Search filter (name or location)
+  // 1. Search filter
   if (params?.search?.trim()) {
-    const q = params.search.toLowerCase().trim();
-    filtered = filtered.filter(
-      (v) =>
-        v.name.toLowerCase().includes(q) ||
-        v.short_name.toLowerCase().includes(q) ||
-        v.location?.toLowerCase().includes(q)
-    );
+    const q = `%${params.search.trim().toLowerCase()}%`;
+    query = query.or(`name.ilike.${q},short_name.ilike.${q},location.ilike.${q}`);
   }
 
   // 2. Status filter
   if (params?.status && params.status !== "ALL") {
-    const activeReq = params.status === "ACTIVE";
-    filtered = filtered.filter((v) => v.is_active === activeReq);
+    query = query.eq("is_active", params.status === "ACTIVE");
   }
 
-  // 3. Database sorting
-  filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  // 3. Sorting
+  query = query.order("created_at", { ascending: false });
 
-  const total = filtered.length;
+  // 4. Range slicing
+  const fromIndex = (page - 1) * pageSize;
+  const toIndex = fromIndex + pageSize - 1;
+  query = query.range(fromIndex, toIndex);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error("Error fetching venues from Supabase:", error);
+    throw new Error(error.message || "Failed to fetch venues.");
+  }
+
+  const total = count || 0;
   const totalPages = Math.ceil(total / pageSize) || 1;
   const validPage = Math.min(page, totalPages);
 
-  const fromIndex = (validPage - 1) * pageSize;
-  const toIndex = Math.min(fromIndex + pageSize, total);
-  const data = filtered.slice(fromIndex, toIndex);
-
   return {
-    data,
+    data: (data || []) as Venue[],
     total,
     page: validPage,
     pageSize,
     totalPages,
     from: total === 0 ? 0 : fromIndex + 1,
-    to: toIndex,
+    to: Math.min(fromIndex + pageSize, total),
   };
 }
 
 export async function fetchVenueById(id: string): Promise<Venue | null> {
-  const found = MOCK_VENUES.find((v) => v.id === id);
-  return found ? { ...found } : null;
+  const supabase = createClient();
+  const { data, error } = await (supabase.from("venues") as any)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as Venue;
 }
 
 export async function createVenue(dto: CreateVenueDTO): Promise<Venue> {
-  const id = `ven-${Date.now()}`;
-  const newVenue: Venue = {
-    id,
-    name: dto.name,
-    short_name: dto.short_name,
-    location: dto.location || null,
-    capacity: dto.capacity ?? null,
-    availability_start: dto.availability_start || null,
-    availability_end: dto.availability_end || null,
-    is_active: dto.is_active !== undefined ? dto.is_active : true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  const supabase = createClient();
+  const { data, error } = await (supabase.from("venues") as any)
+    .insert({
+      name: dto.name,
+      short_name: dto.short_name,
+      location: dto.location || null,
+      capacity: dto.capacity ?? null,
+      availability_start: dto.availability_start || null,
+      availability_end: dto.availability_end || null,
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+    })
+    .select()
+    .single();
 
-  MOCK_VENUES.unshift(newVenue);
-  return newVenue;
+  if (error || !data) {
+    console.error("Error creating venue:", error);
+    throw new Error(error?.message || "Failed to create venue.");
+  }
+
+  return data as Venue;
 }
 
 export async function updateVenue(id: string, dto: Partial<CreateVenueDTO>): Promise<Venue> {
-  const index = MOCK_VENUES.findIndex((v) => v.id === id);
-  if (index === -1) {
-    throw new Error(`Venue with ID ${id} not found.`);
+  const supabase = createClient();
+
+  const updateFields: any = { updated_at: new Date().toISOString() };
+  if (dto.name !== undefined) updateFields.name = dto.name;
+  if (dto.short_name !== undefined) updateFields.short_name = dto.short_name;
+  if (dto.location !== undefined) updateFields.location = dto.location;
+  if (dto.capacity !== undefined) updateFields.capacity = dto.capacity;
+  if (dto.availability_start !== undefined) updateFields.availability_start = dto.availability_start;
+  if (dto.availability_end !== undefined) updateFields.availability_end = dto.availability_end;
+  if (dto.is_active !== undefined) updateFields.is_active = dto.is_active;
+
+  const { data, error } = await (supabase.from("venues") as any)
+    .update(updateFields)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error("Error updating venue:", error);
+    throw new Error(error?.message || "Failed to update venue.");
   }
 
-  const existing = MOCK_VENUES[index];
-  const updated: Venue = {
-    ...existing,
-    name: dto.name ?? existing.name,
-    short_name: dto.short_name ?? existing.short_name,
-    location: dto.location !== undefined ? dto.location : existing.location,
-    capacity: dto.capacity !== undefined ? dto.capacity : existing.capacity,
-    availability_start:
-      dto.availability_start !== undefined ? dto.availability_start : existing.availability_start,
-    availability_end:
-      dto.availability_end !== undefined ? dto.availability_end : existing.availability_end,
-    is_active: dto.is_active !== undefined ? dto.is_active : existing.is_active,
-    updated_at: new Date().toISOString(),
-  };
-
-  MOCK_VENUES[index] = updated;
-  return updated;
+  return data as Venue;
 }
 
 export async function deleteVenue(id: string): Promise<{ success: boolean; error?: string }> {
-  const initialLength = MOCK_VENUES.length;
-  MOCK_VENUES = MOCK_VENUES.filter((v) => v.id !== id);
-  if (MOCK_VENUES.length < initialLength) {
-    return { success: true };
+  const supabase = createClient();
+  const { error } = await (supabase.from("venues") as any).delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting venue:", error);
+    return { success: false, error: error.message };
   }
-  return { success: false, error: "Venue not found." };
+  return { success: true };
 }

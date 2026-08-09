@@ -88,7 +88,7 @@ export default function TournamentDetailPage({
 
       {/* Quick Navigation Action Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Link href="/admin/teams">
+        <Link href={`/admin/tournaments/${id}/teams`}>
           <Card hoverable className="text-center py-4 space-y-1">
             <span className="font-display font-bold text-sm text-[var(--color-primary)]">
               Teams & Roster

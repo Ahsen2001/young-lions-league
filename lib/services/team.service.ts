@@ -1,5 +1,6 @@
 import type { Team, TeamStatus, TournamentStatus } from "@/types";
 import { canModifyTeams } from "@/lib/validation/team";
+import { createClient } from "@/lib/supabase/client";
 
 export interface CreateTeamDTO {
   name: string;
@@ -32,10 +33,22 @@ export interface PaginatedTeamsResult {
   to: number;
 }
 
-// Seeded dataset simulating teams database table per tournament
-let MOCK_TEAMS: Team[] = [
+const INITIAL_SEED_TEAMS: Array<{
+  tournament_id: string;
+  name: string;
+  short_name: string;
+  slug: string;
+  logo_url?: string | null;
+  registration_number: string;
+  manager_name: string;
+  captain_name: string;
+  contact_phone: string;
+  contact_email: string;
+  status: TeamStatus;
+  is_active: boolean;
+  group_name?: string | null;
+}> = [
   {
-    id: "tm-001",
     tournament_id: "trn-2025-01",
     name: "Oddamavadi Youth FC",
     short_name: "OYFC",
@@ -48,13 +61,9 @@ let MOCK_TEAMS: Team[] = [
     contact_email: "farook@oddamavadiyouth.lk",
     status: "APPROVED",
     is_active: true,
-    group_id: "grp-a",
     group_name: "Group A",
-    created_at: "2025-07-02T10:00:00Z",
-    updated_at: "2025-07-02T10:00:00Z",
   },
   {
-    id: "tm-002",
     tournament_id: "trn-2025-01",
     name: "Young Lions Senior XI",
     short_name: "YLXI",
@@ -67,13 +76,9 @@ let MOCK_TEAMS: Team[] = [
     contact_email: "saifullah@younglions.lk",
     status: "APPROVED",
     is_active: true,
-    group_id: "grp-a",
     group_name: "Group A",
-    created_at: "2025-07-03T10:00:00Z",
-    updated_at: "2025-07-03T10:00:00Z",
   },
   {
-    id: "tm-003",
     tournament_id: "trn-2025-01",
     name: "Coastal Eagles SC",
     short_name: "CESC",
@@ -86,13 +91,9 @@ let MOCK_TEAMS: Team[] = [
     contact_email: "rameez@coastaleagles.lk",
     status: "APPROVED",
     is_active: true,
-    group_id: "grp-b",
     group_name: "Group B",
-    created_at: "2025-07-04T10:00:00Z",
-    updated_at: "2025-07-04T10:00:00Z",
   },
   {
-    id: "tm-004",
     tournament_id: "trn-2025-01",
     name: "Red Storm Oddamavadi",
     short_name: "RSO",
@@ -105,13 +106,9 @@ let MOCK_TEAMS: Team[] = [
     contact_email: "aslam@redstorm.lk",
     status: "APPROVED",
     is_active: true,
-    group_id: "grp-b",
     group_name: "Group B",
-    created_at: "2025-07-05T10:00:00Z",
-    updated_at: "2025-07-05T10:00:00Z",
   },
   {
-    id: "tm-005",
     tournament_id: "trn-2025-01",
     name: "Green Falcons United",
     short_name: "GFU",
@@ -124,97 +121,132 @@ let MOCK_TEAMS: Team[] = [
     contact_email: "jamsheed@falcons.lk",
     status: "PENDING",
     is_active: true,
-    group_id: null,
     group_name: null,
-    created_at: "2025-07-06T10:00:00Z",
-    updated_at: "2025-07-06T10:00:00Z",
-  },
-  {
-    id: "tm-006",
-    tournament_id: "trn-2025-02",
-    name: "Oddamavadi Under-19 Stars",
-    short_name: "U19S",
-    slug: "oddamavadi-under-19-stars",
-    logo_url: null,
-    registration_number: "REG-2025-006",
-    manager_name: "R. Shafeek",
-    captain_name: "Z. Akram",
-    contact_phone: "+94 77 678 9012",
-    contact_email: "shafeek@stars.lk",
-    status: "APPROVED",
-    is_active: true,
-    group_id: null,
-    group_name: null,
-    created_at: "2025-07-16T10:00:00Z",
-    updated_at: "2025-07-16T10:00:00Z",
   },
 ];
 
+function mapTeamRow(row: any): Team {
+  return {
+    id: row.id,
+    tournament_id: row.tournament_id,
+    name: row.name,
+    short_name: row.short_name,
+    slug: row.slug,
+    logo_url: row.logo_url || null,
+    registration_number: row.registration_number || null,
+    manager_name: row.manager_name || row.contact_name || null,
+    captain_name: row.captain_name || null,
+    contact_phone: row.contact_phone || null,
+    contact_email: row.contact_email || null,
+    status: row.status || (row.is_active ? "APPROVED" : "INACTIVE"),
+    is_active: row.is_active !== undefined ? row.is_active : true,
+    group_id: row.group_id || null,
+    group_name: row.group_name || null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+async function seedInitialTeamsIfEmpty(supabase: any, tournamentId: string) {
+  try {
+    const { count } = await (supabase.from("teams") as any)
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId);
+
+    if (count === 0 && tournamentId === "trn-2025-01") {
+      for (const tm of INITIAL_SEED_TEAMS) {
+        await (supabase.from("teams") as any).insert({
+          tournament_id: tournamentId,
+          name: tm.name,
+          short_name: tm.short_name,
+          slug: tm.slug,
+          logo_url: tm.logo_url || null,
+          contact_name: tm.manager_name,
+          contact_phone: tm.contact_phone,
+          is_active: tm.is_active,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Auto-seeding teams check skipped:", err);
+  }
+}
+
 /**
- * Server/Database Paginated Query for Tournament Teams.
+ * Server/Database Paginated Query for Tournament Teams using Supabase.
  */
 export async function fetchTeams(
   tournamentId: string,
   params?: FetchTeamsParams
 ): Promise<PaginatedTeamsResult> {
+  const supabase = createClient();
+  await seedInitialTeamsIfEmpty(supabase, tournamentId);
+
   const page = Math.max(1, params?.page || 1);
   const pageSize = Math.max(1, params?.pageSize || 10);
 
-  let filtered = MOCK_TEAMS.filter((t) => t.tournament_id === tournamentId);
+  let query: any = (supabase.from("teams") as any)
+    .select("*", { count: "exact" })
+    .eq("tournament_id", tournamentId);
 
   // Search filter
   if (params?.search?.trim()) {
-    const q = params.search.toLowerCase().trim();
-    filtered = filtered.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.short_name.toLowerCase().includes(q) ||
-        t.manager_name?.toLowerCase().includes(q) ||
-        t.registration_number?.toLowerCase().includes(q)
-    );
+    const q = `%${params.search.trim().toLowerCase()}%`;
+    query = query.or(`name.ilike.${q},short_name.ilike.${q},contact_name.ilike.${q}`);
   }
 
   // Status filter
   if (params?.status && params.status !== "ALL") {
-    filtered = filtered.filter((t) => t.status === params.status);
-  }
-
-  // Group filter
-  if (params?.group && params.group !== "ALL") {
-    if (params.group === "UNASSIGNED") {
-      filtered = filtered.filter((t) => !t.group_id && !t.group_name);
-    } else {
-      filtered = filtered.filter(
-        (t) => t.group_id === params.group || t.group_name === params.group
-      );
+    if (params.status === "APPROVED") {
+      query = query.eq("is_active", true);
+    } else if (params.status === "INACTIVE") {
+      query = query.eq("is_active", false);
     }
   }
 
   // Database sorting (Newest registration first)
-  filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  query = query.order("created_at", { ascending: false });
 
-  const total = filtered.length;
+  // Range slicing
+  const fromIndex = (page - 1) * pageSize;
+  const toIndex = fromIndex + pageSize - 1;
+  query = query.range(fromIndex, toIndex);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error("Error fetching teams from Supabase:", error);
+    throw new Error(error.message || "Failed to fetch teams.");
+  }
+
+  const total = count || 0;
   const totalPages = Math.ceil(total / pageSize) || 1;
   const validPage = Math.min(page, totalPages);
-
-  const fromIndex = (validPage - 1) * pageSize;
-  const toIndex = Math.min(fromIndex + pageSize, total);
-  const data = filtered.slice(fromIndex, toIndex);
+  const mapped = (data || []).map(mapTeamRow);
 
   return {
-    data,
+    data: mapped,
     total,
     page: validPage,
     pageSize,
     totalPages,
     from: total === 0 ? 0 : fromIndex + 1,
-    to: toIndex,
+    to: Math.min(fromIndex + pageSize, total),
   };
 }
 
 export async function fetchTeamById(id: string): Promise<Team | null> {
-  const found = MOCK_TEAMS.find((t) => t.id === id);
-  return found ? { ...found } : null;
+  const supabase = createClient();
+  const { data, error } = await (supabase.from("teams") as any)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return mapTeamRow(data);
 }
 
 export async function createTeam(
@@ -226,36 +258,32 @@ export async function createTeam(
     throw new Error("Cannot register new team. Tournament lifecycle is locked for team additions.");
   }
 
-  const id = `tm-${Date.now()}`;
+  const supabase = createClient();
   const slug = dto.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  const regNum = dto.registration_number || `REG-2025-${Math.floor(100 + Math.random() * 900)}`;
+  const { data, error } = await (supabase.from("teams") as any)
+    .insert({
+      tournament_id: tournamentId,
+      name: dto.name,
+      short_name: dto.short_name.toUpperCase(),
+      slug,
+      logo_url: dto.logo_url || null,
+      contact_name: dto.manager_name || null,
+      contact_phone: dto.contact_phone || null,
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+    })
+    .select()
+    .single();
 
-  const newTeam: Team = {
-    id,
-    tournament_id: tournamentId,
-    name: dto.name,
-    short_name: dto.short_name.toUpperCase(),
-    slug,
-    logo_url: dto.logo_url || null,
-    registration_number: regNum,
-    manager_name: dto.manager_name || null,
-    captain_name: dto.captain_name || null,
-    contact_phone: dto.contact_phone || null,
-    contact_email: dto.contact_email || null,
-    status: dto.status || "APPROVED",
-    is_active: dto.is_active !== undefined ? dto.is_active : true,
-    group_id: null,   // STRICT: Group allocation happens ONLY through official draw
-    group_name: null, // STRICT: Group allocation happens ONLY through official draw
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  if (error || !data) {
+    console.error("Error creating team:", error);
+    throw new Error(error?.message || "Failed to create team.");
+  }
 
-  MOCK_TEAMS.unshift(newTeam);
-  return newTeam;
+  return mapTeamRow(data);
 }
 
 export async function updateTeam(
@@ -267,30 +295,33 @@ export async function updateTeam(
     throw new Error("Cannot modify team details. Competition matches have started or draw is locked.");
   }
 
-  const index = MOCK_TEAMS.findIndex((t) => t.id === id);
-  if (index === -1) {
-    throw new Error(`Team with ID ${id} not found.`);
+  const supabase = createClient();
+  const updateFields: any = { updated_at: new Date().toISOString() };
+  if (dto.name !== undefined) {
+    updateFields.name = dto.name;
+    updateFields.slug = dto.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+  if (dto.short_name !== undefined) updateFields.short_name = dto.short_name.toUpperCase();
+  if (dto.logo_url !== undefined) updateFields.logo_url = dto.logo_url;
+  if (dto.manager_name !== undefined) updateFields.contact_name = dto.manager_name;
+  if (dto.contact_phone !== undefined) updateFields.contact_phone = dto.contact_phone;
+  if (dto.is_active !== undefined) updateFields.is_active = dto.is_active;
+
+  const { data, error } = await (supabase.from("teams") as any)
+    .update(updateFields)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error("Error updating team:", error);
+    throw new Error(error?.message || "Failed to update team.");
   }
 
-  const existing = MOCK_TEAMS[index];
-  const updated: Team = {
-    ...existing,
-    name: dto.name ?? existing.name,
-    short_name: dto.short_name ? dto.short_name.toUpperCase() : existing.short_name,
-    logo_url: dto.logo_url !== undefined ? dto.logo_url : existing.logo_url,
-    registration_number:
-      dto.registration_number !== undefined ? dto.registration_number : existing.registration_number,
-    manager_name: dto.manager_name !== undefined ? dto.manager_name : existing.manager_name,
-    captain_name: dto.captain_name !== undefined ? dto.captain_name : existing.captain_name,
-    contact_phone: dto.contact_phone !== undefined ? dto.contact_phone : existing.contact_phone,
-    contact_email: dto.contact_email !== undefined ? dto.contact_email : existing.contact_email,
-    status: dto.status ?? existing.status,
-    is_active: dto.is_active !== undefined ? dto.is_active : existing.is_active,
-    updated_at: new Date().toISOString(),
-  };
-
-  MOCK_TEAMS[index] = updated;
-  return updated;
+  return mapTeamRow(data);
 }
 
 export async function deleteTeam(
@@ -304,12 +335,13 @@ export async function deleteTeam(
     };
   }
 
-  const initialLength = MOCK_TEAMS.length;
-  MOCK_TEAMS = MOCK_TEAMS.filter((t) => t.id !== id);
-  if (MOCK_TEAMS.length < initialLength) {
-    return { success: true };
+  const supabase = createClient();
+  const { error } = await (supabase.from("teams") as any).delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting team:", error);
+    return { success: false, error: error.message };
   }
-  return { success: false, error: "Team not found." };
+  return { success: true };
 }
 
 export async function bulkCreateTeams(
@@ -321,43 +353,34 @@ export async function bulkCreateTeams(
     throw new Error("Cannot import teams. Tournament lifecycle is locked.");
   }
 
-  const createdTeams: Team[] = [];
-
-  for (const dto of dtos) {
-    const id = `tm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-    const slug = dto.name
+  const supabase = createClient();
+  const insertRows = dtos.map((dto) => ({
+    tournament_id: tournamentId,
+    name: dto.name,
+    short_name: dto.short_name.toUpperCase(),
+    slug: dto.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+      .replace(/(^-|-$)/g, ""),
+    logo_url: dto.logo_url || null,
+    contact_name: dto.manager_name || null,
+    contact_phone: dto.contact_phone || null,
+    is_active: dto.is_active !== undefined ? dto.is_active : true,
+  }));
 
-    const regNum = dto.registration_number || `REG-2025-${Math.floor(100 + Math.random() * 900)}`;
+  const { data, error } = await (supabase.from("teams") as any)
+    .insert(insertRows)
+    .select();
 
-    const newTeam: Team = {
-      id,
-      tournament_id: tournamentId,
-      name: dto.name,
-      short_name: dto.short_name.toUpperCase(),
-      slug,
-      logo_url: dto.logo_url || null,
-      registration_number: regNum,
-      manager_name: dto.manager_name || null,
-      captain_name: dto.captain_name || null,
-      contact_phone: dto.contact_phone || null,
-      contact_email: dto.contact_email || null,
-      status: dto.status || "APPROVED",
-      is_active: dto.is_active !== undefined ? dto.is_active : true,
-      group_id: null,
-      group_name: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    MOCK_TEAMS.unshift(newTeam);
-    createdTeams.push(newTeam);
+  if (error || !data) {
+    console.error("Error bulk creating teams:", error);
+    throw new Error(error?.message || "Failed to bulk create teams.");
   }
 
+  const mapped = data.map(mapTeamRow);
+
   return {
-    importedCount: createdTeams.length,
-    teams: createdTeams,
+    importedCount: mapped.length,
+    teams: mapped,
   };
 }

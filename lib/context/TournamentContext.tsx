@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { TournamentRef } from "@/types";
+import { fetchTournaments } from "@/lib/services/tournament.service";
 
 export interface TournamentContextType {
   currentTournament: TournamentRef | null;
@@ -10,55 +11,50 @@ export interface TournamentContextType {
   isLoading: boolean;
 }
 
-const DEFAULT_TOURNAMENTS: TournamentRef[] = [
-  {
-    id: "trn-2025-01",
-    name: "Young Lions Super League 2025",
-    slug: "young-lions-super-league-2025",
-    status: "TOURNAMENT_IN_PROGRESS",
-    season: "2025",
-  },
-  {
-    id: "trn-2025-02",
-    name: "Oddamavadi Youth Cup 2025",
-    slug: "oddamavadi-youth-cup-2025",
-    status: "REGISTRATION_OPEN",
-    season: "2025",
-  },
-  {
-    id: "trn-2024-01",
-    name: "Young Lions Champions Trophy 2024",
-    slug: "young-lions-champions-trophy-2024",
-    status: "COMPLETED",
-    season: "2024",
-  },
-];
-
 const TournamentContext = createContext<TournamentContextType | undefined>(
   undefined
 );
 
 export function TournamentProvider({ children }: { children: React.ReactNode }) {
-  const [tournaments] = useState<TournamentRef[]>(DEFAULT_TOURNAMENTS);
+  const [tournaments, setTournaments] = useState<TournamentRef[]>([]);
   const [currentTournament, setCurrentTournamentState] =
-    useState<TournamentRef | null>(DEFAULT_TOURNAMENTS[0]);
+    useState<TournamentRef | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const savedId = localStorage.getItem("yl_active_tournament_id");
-      if (savedId) {
-        const found = tournaments.find((t) => t.id === savedId);
-        if (found) {
-          setCurrentTournamentState(found);
-        }
+    let isMounted = true;
+    async function loadTournaments() {
+      try {
+        const res = await fetchTournaments({ pageSize: 50 });
+        if (!isMounted) return;
+
+        const refs: TournamentRef[] = res.data.map((t) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+          status: t.status,
+          season: t.season,
+        }));
+
+        setTournaments(refs);
+
+        // Restore saved active tournament or default to first
+        const savedId = typeof window !== "undefined" ? localStorage.getItem("yl_active_tournament_id") : null;
+        const found = refs.find((t) => t.id === savedId);
+        setCurrentTournamentState(found || refs[0] || null);
+      } catch (err) {
+        console.warn("Could not load tournaments in context:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-    } catch {
-      // Ignore localStorage read errors in SSR/strict modes
-    } finally {
-      setIsLoading(false);
     }
-  }, [tournaments]);
+
+    loadTournaments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const setCurrentTournament = (tournament: TournamentRef) => {
     setCurrentTournamentState(tournament);

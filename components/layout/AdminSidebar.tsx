@@ -65,14 +65,34 @@ export default function AdminSidebar() {
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-1 scrollbar-thin">
         {ADMIN_NAV_ITEMS.map((item) => {
-          const active =
-            item.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(item.href);
+          // Teams are tournament-scoped — resolve the href dynamically
+          const resolvedHref =
+            item.label === "Teams" && currentTournament?.id
+              ? `/admin/tournaments/${currentTournament.id}/teams`
+              : item.href;
+
+          // Active detection — each label owns its path segment exclusively.
+          // Teams owns any path containing /teams (even under /tournaments/[id]/teams).
+          // Tournaments is only active on pure tournament routes, NOT on teams sub-routes.
+          let active = false;
+          if (item.href === "/admin") {
+            active = pathname === "/admin";
+          } else if (item.label === "Teams") {
+            active = pathname.includes("/teams");
+          } else if (item.label === "Tournaments") {
+            // Active on /admin/tournaments and /admin/tournaments/[id] but NOT when
+            // a more-specific item (Teams) owns the path.
+            active =
+              pathname.startsWith("/admin/tournaments") &&
+              !pathname.includes("/teams");
+          } else {
+            active = pathname.startsWith(item.href);
+          }
+
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={resolvedHref}
               title={collapsed ? item.label : undefined}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] font-display text-xs tracking-widest uppercase transition-all duration-150",

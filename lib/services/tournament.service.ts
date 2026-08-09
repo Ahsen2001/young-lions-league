@@ -1,13 +1,37 @@
 import type {
-  Tournament,
-  TournamentSettings,
   TournamentStatus,
   TournamentFormat,
 } from "@/types";
 import { isFormatLocked } from "@/lib/validation/tournament";
+import { createClient } from "@/lib/supabase/client";
 
-export interface TournamentWithSettings extends Tournament {
-  settings?: TournamentSettings;
+export interface TournamentWithSettings {
+  id: string;
+  name: string;
+  slug: string;
+  season: string;
+  status: TournamentStatus;
+  format: TournamentFormat;
+  start_date?: string | null;
+  end_date?: string | null;
+  description?: string | null;
+  logo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+  settings?: {
+    id: string;
+    tournament_id: string;
+    num_groups: number;
+    teams_per_group: number;
+    max_teams: number;
+    teams_advancing_per_group: number;
+    points_for_win: number;
+    points_for_draw: number;
+    points_for_loss: number;
+    allow_draws_in_group: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
 }
 
 export interface CreateTournamentDTO {
@@ -46,10 +70,9 @@ export interface PaginatedTournamentsResult {
   to: number;
 }
 
-// Seeded dataset to simulate database records
-let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
+// Initial seed tournaments to populate database on first startup if empty
+const INITIAL_SEED_TOURNAMENTS = [
   {
-    id: "trn-2025-01",
     name: "Young Lions Super League 2025",
     slug: "young-lions-super-league-2025",
     season: "2025",
@@ -58,11 +81,7 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
     start_date: "2025-08-01",
     end_date: "2025-09-15",
     description: "The primary annual Oddamavadi league tournament.",
-    created_at: "2025-08-01T10:00:00Z",
-    updated_at: "2025-08-01T10:00:00Z",
     settings: {
-      id: "set-2025-01",
-      tournament_id: "trn-2025-01",
       num_groups: 4,
       teams_per_group: 4,
       max_teams: 16,
@@ -71,12 +90,9 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
       points_for_draw: 1,
       points_for_loss: 0,
       allow_draws_in_group: true,
-      created_at: "2025-08-01T10:00:00Z",
-      updated_at: "2025-08-01T10:00:00Z",
     },
   },
   {
-    id: "trn-2025-02",
     name: "Oddamavadi Youth Cup 2025",
     slug: "oddamavadi-youth-cup-2025",
     season: "2025",
@@ -85,11 +101,7 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
     start_date: "2025-10-01",
     end_date: "2025-10-20",
     description: "Knockout youth competition for local clubs.",
-    created_at: "2025-07-15T10:00:00Z",
-    updated_at: "2025-07-15T10:00:00Z",
     settings: {
-      id: "set-2025-02",
-      tournament_id: "trn-2025-02",
       num_groups: 2,
       teams_per_group: 4,
       max_teams: 8,
@@ -98,12 +110,9 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
       points_for_draw: 1,
       points_for_loss: 0,
       allow_draws_in_group: true,
-      created_at: "2025-07-15T10:00:00Z",
-      updated_at: "2025-07-15T10:00:00Z",
     },
   },
   {
-    id: "trn-2024-01",
     name: "Young Lions Champions Trophy 2024",
     slug: "young-lions-champions-trophy-2024",
     season: "2024",
@@ -112,11 +121,7 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
     start_date: "2024-08-01",
     end_date: "2024-09-01",
     description: "Previous season tournament.",
-    created_at: "2024-07-01T10:00:00Z",
-    updated_at: "2024-09-01T10:00:00Z",
     settings: {
-      id: "set-2024-01",
-      tournament_id: "trn-2024-01",
       num_groups: 2,
       teams_per_group: 4,
       max_teams: 8,
@@ -125,342 +130,193 @@ let MOCK_TOURNAMENTS: TournamentWithSettings[] = [
       points_for_draw: 1,
       points_for_loss: 0,
       allow_draws_in_group: true,
-      created_at: "2024-07-01T10:00:00Z",
-      updated_at: "2024-07-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2025-03",
-    name: "Eastern Province Football Challenge 2025",
-    slug: "eastern-province-football-challenge-2025",
-    season: "2025",
-    status: "DRAFT",
-    format: "GROUP_QUARTER_SEMI_FINAL",
-    start_date: "2025-11-01",
-    end_date: "2025-12-01",
-    description: "Regional football tournament in Sri Lanka Eastern Province.",
-    created_at: "2025-06-01T10:00:00Z",
-    updated_at: "2025-06-01T10:00:00Z",
-    settings: {
-      id: "set-2025-03",
-      tournament_id: "trn-2025-03",
-      num_groups: 4,
-      teams_per_group: 4,
-      max_teams: 16,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2025-06-01T10:00:00Z",
-      updated_at: "2025-06-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2025-04",
-    name: "Oddamavadi Premier Division 2025",
-    slug: "oddamavadi-premier-division-2025",
-    season: "2025",
-    status: "READY_FOR_DRAW",
-    format: "GROUP_QUARTER_SEMI_FINAL",
-    start_date: "2025-09-20",
-    end_date: "2025-11-10",
-    description: "Premier division club competition.",
-    created_at: "2025-05-10T10:00:00Z",
-    updated_at: "2025-05-10T10:00:00Z",
-    settings: {
-      id: "set-2025-04",
-      tournament_id: "trn-2025-04",
-      num_groups: 4,
-      teams_per_group: 4,
-      max_teams: 16,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2025-05-10T10:00:00Z",
-      updated_at: "2025-05-10T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2025-05",
-    name: "Young Lions Independence Shield 2025",
-    slug: "young-lions-independence-shield-2025",
-    season: "2025",
-    status: "DRAFT",
-    format: "GROUP_SEMI_FINAL",
-    start_date: "2025-02-04",
-    end_date: "2025-02-10",
-    description: "Special independence day tournament.",
-    created_at: "2025-01-15T10:00:00Z",
-    updated_at: "2025-01-15T10:00:00Z",
-    settings: {
-      id: "set-2025-05",
-      tournament_id: "trn-2025-05",
-      num_groups: 2,
-      teams_per_group: 4,
-      max_teams: 8,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2025-01-15T10:00:00Z",
-      updated_at: "2025-01-15T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2024-02",
-    name: "Oddamavadi Monsoon Cup 2024",
-    slug: "oddamavadi-monsoon-cup-2024",
-    season: "2024",
-    status: "COMPLETED",
-    format: "GROUP_SEMI_FINAL",
-    start_date: "2024-11-01",
-    end_date: "2024-11-20",
-    description: "Annual monsoon tournament.",
-    created_at: "2024-10-01T10:00:00Z",
-    updated_at: "2024-11-20T10:00:00Z",
-    settings: {
-      id: "set-2024-02",
-      tournament_id: "trn-2024-02",
-      num_groups: 2,
-      teams_per_group: 4,
-      max_teams: 8,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2024-10-01T10:00:00Z",
-      updated_at: "2024-10-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2024-03",
-    name: "Young Lions Summer Invitational 2024",
-    slug: "young-lions-summer-invitational-2024",
-    season: "2024",
-    status: "COMPLETED",
-    format: "GROUP_QUARTER_SEMI_FINAL",
-    start_date: "2024-06-01",
-    end_date: "2024-06-30",
-    description: "Invitational summer league.",
-    created_at: "2024-05-01T10:00:00Z",
-    updated_at: "2024-06-30T10:00:00Z",
-    settings: {
-      id: "set-2024-03",
-      tournament_id: "trn-2024-03",
-      num_groups: 4,
-      teams_per_group: 4,
-      max_teams: 16,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2024-05-01T10:00:00Z",
-      updated_at: "2024-05-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2023-01",
-    name: "Young Lions Founders Cup 2023",
-    slug: "young-lions-founders-cup-2023",
-    season: "2023",
-    status: "COMPLETED",
-    format: "GROUP_SEMI_FINAL",
-    start_date: "2023-08-01",
-    end_date: "2023-08-25",
-    description: "Founders memorial tournament.",
-    created_at: "2023-07-01T10:00:00Z",
-    updated_at: "2023-08-25T10:00:00Z",
-    settings: {
-      id: "set-2023-01",
-      tournament_id: "trn-2023-01",
-      num_groups: 2,
-      teams_per_group: 4,
-      max_teams: 8,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2023-07-01T10:00:00Z",
-      updated_at: "2023-07-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2023-02",
-    name: "Oddamavadi Challenge Trophy 2023",
-    slug: "oddamavadi-challenge-trophy-2023",
-    season: "2023",
-    status: "COMPLETED",
-    format: "GROUP_FINAL",
-    start_date: "2023-11-01",
-    end_date: "2023-11-15",
-    description: "Annual challenge trophy.",
-    created_at: "2023-10-01T10:00:00Z",
-    updated_at: "2023-11-15T10:00:00Z",
-    settings: {
-      id: "set-2023-02",
-      tournament_id: "trn-2023-02",
-      num_groups: 2,
-      teams_per_group: 4,
-      max_teams: 8,
-      teams_advancing_per_group: 1,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2023-10-01T10:00:00Z",
-      updated_at: "2023-10-01T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2025-06",
-    name: "Young Lions Futsal Super Cup 2025",
-    slug: "young-lions-futsal-super-cup-2025",
-    season: "2025",
-    status: "REGISTRATION_OPEN",
-    format: "GROUP_SEMI_FINAL",
-    start_date: "2025-12-10",
-    end_date: "2025-12-25",
-    description: "Indoor futsal tournament.",
-    created_at: "2025-07-20T10:00:00Z",
-    updated_at: "2025-07-20T10:00:00Z",
-    settings: {
-      id: "set-2025-06",
-      tournament_id: "trn-2025-06",
-      num_groups: 2,
-      teams_per_group: 4,
-      max_teams: 8,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2025-07-20T10:00:00Z",
-      updated_at: "2025-07-20T10:00:00Z",
-    },
-  },
-  {
-    id: "trn-2025-07",
-    name: "Batticaloa District Championship 2025",
-    slug: "batticaloa-district-championship-2025",
-    season: "2025",
-    status: "DRAFT",
-    format: "GROUP_QUARTER_SEMI_FINAL",
-    start_date: "2025-12-01",
-    end_date: "2025-12-30",
-    description: "District level championship.",
-    created_at: "2025-06-15T10:00:00Z",
-    updated_at: "2025-06-15T10:00:00Z",
-    settings: {
-      id: "set-2025-07",
-      tournament_id: "trn-2025-07",
-      num_groups: 4,
-      teams_per_group: 4,
-      max_teams: 16,
-      teams_advancing_per_group: 2,
-      points_for_win: 3,
-      points_for_draw: 1,
-      points_for_loss: 0,
-      allow_draws_in_group: true,
-      created_at: "2025-06-15T10:00:00Z",
-      updated_at: "2025-06-15T10:00:00Z",
     },
   },
 ];
 
+function formatTournamentRow(row: any): TournamentWithSettings {
+  const settingsObj = Array.isArray(row.tournament_settings)
+    ? row.tournament_settings[0]
+    : row.tournament_settings || row.settings;
+
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    season: row.season,
+    status: row.status,
+    format: row.format,
+    start_date: row.start_date,
+    end_date: row.end_date,
+    description: row.description,
+    logo_url: row.logo_url || null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    settings: settingsObj
+      ? {
+          id: settingsObj.id,
+          tournament_id: settingsObj.tournament_id,
+          num_groups: settingsObj.num_groups,
+          teams_per_group: settingsObj.teams_per_group,
+          max_teams: settingsObj.max_teams,
+          teams_advancing_per_group: settingsObj.teams_advancing_per_group,
+          points_for_win: settingsObj.points_for_win,
+          points_for_draw: settingsObj.points_for_draw,
+          points_for_loss: settingsObj.points_for_loss,
+          allow_draws_in_group: settingsObj.allow_draws_in_group,
+          created_at: settingsObj.created_at,
+          updated_at: settingsObj.updated_at,
+        }
+      : undefined,
+  };
+}
+
+async function seedInitialTournamentsIfEmpty(supabase: any) {
+  try {
+    const { count } = await (supabase.from("tournaments") as any)
+      .select("id", { count: "exact", head: true });
+
+    if (count === 0) {
+      for (const t of INITIAL_SEED_TOURNAMENTS) {
+        const { data: newT, error: tErr } = await (supabase
+          .from("tournaments") as any)
+          .insert({
+            name: t.name,
+            slug: t.slug,
+            season: t.season,
+            status: t.status,
+            format: t.format,
+            start_date: t.start_date,
+            end_date: t.end_date,
+            description: t.description,
+          })
+          .select()
+          .single();
+
+        if (newT && !tErr) {
+          await (supabase.from("tournament_settings") as any).insert({
+            tournament_id: newT.id,
+            ...t.settings,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Auto-seeding check skipped:", err);
+  }
+}
+
 /**
- * Server/Database Paginated query function.
- * Does NOT fetch all records into JS — executes database filtering, sorting, and range limit.
+ * Database-backed paginated tournament query using Supabase.
  */
 export async function fetchTournaments(
   params?: FetchTournamentsParams
 ): Promise<PaginatedTournamentsResult> {
+  const supabase = createClient();
+
+  // Ensure initial seed exists if DB is completely fresh
+  await seedInitialTournamentsIfEmpty(supabase);
+
   const page = Math.max(1, params?.page || 1);
   const pageSize = Math.max(1, params?.pageSize || 10);
   const sort = params?.sort || "newest";
 
-  let filtered = [...MOCK_TOURNAMENTS];
+  let query: any = (supabase.from("tournaments") as any)
+    .select("*, tournament_settings(*)", { count: "exact" });
 
   // 1. Search filter
   if (params?.search?.trim()) {
-    const q = params.search.toLowerCase().trim();
-    filtered = filtered.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.season.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q)
-    );
+    const q = `%${params.search.trim().toLowerCase()}%`;
+    query = query.or(`name.ilike.${q},season.ilike.${q},description.ilike.${q}`);
   }
 
   // 2. Status filter
   if (params?.status && params.status !== "ALL") {
-    filtered = filtered.filter((t) => t.status === params.status);
+    query = query.eq("status", params.status);
   }
 
   // 3. Database sorting
-  filtered.sort((a, b) => {
-    const timeA = new Date(a.created_at).getTime();
-    const timeB = new Date(b.created_at).getTime();
-    return sort === "oldest" ? timeA - timeB : timeB - timeA;
-  });
+  query = query.order("created_at", { ascending: sort === "oldest" });
 
-  const total = filtered.length;
+  // 4. Server/Database range slicing
+  const fromIndex = (page - 1) * pageSize;
+  const toIndex = fromIndex + pageSize - 1;
+  query = query.range(fromIndex, toIndex);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error("Error fetching tournaments from Supabase:", error);
+    throw new Error(error.message || "Failed to fetch tournaments.");
+  }
+
+  const total = count || 0;
   const totalPages = Math.ceil(total / pageSize) || 1;
   const validPage = Math.min(page, totalPages);
-
-  // 4. Server/Database range slicing (simulating Supabase .range(from, to))
-  const fromIndex = (validPage - 1) * pageSize;
-  const toIndex = Math.min(fromIndex + pageSize, total);
-  const data = filtered.slice(fromIndex, toIndex);
+  const formattedData = (data || []).map(formatTournamentRow);
 
   return {
-    data,
+    data: formattedData,
     total,
     page: validPage,
     pageSize,
     totalPages,
     from: total === 0 ? 0 : fromIndex + 1,
-    to: toIndex,
+    to: Math.min(fromIndex + pageSize, total),
   };
 }
 
 export async function fetchTournamentById(
   id: string
 ): Promise<TournamentWithSettings | null> {
-  const found = MOCK_TOURNAMENTS.find((t) => t.id === id);
-  return found ? { ...found } : null;
+  const supabase = createClient();
+  const { data, error } = await (supabase.from("tournaments") as any)
+    .select("*, tournament_settings(*)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return formatTournamentRow(data);
 }
 
 export async function createTournament(
   dto: CreateTournamentDTO
 ): Promise<TournamentWithSettings> {
-  const id = `trn-${Date.now()}`;
+  const supabase = createClient();
   const slug = dto.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  const newTournament: TournamentWithSettings = {
-    id,
-    name: dto.name,
-    slug,
-    season: dto.season,
-    status: "DRAFT",
-    format: dto.format,
-    start_date: dto.start_date || null,
-    end_date: dto.end_date || null,
-    description: dto.description || null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    settings: {
-      id: `set-${Date.now()}`,
-      tournament_id: id,
+  // 1. Insert tournament row
+  const { data: tournamentData, error: tErr } = await (supabase
+    .from("tournaments") as any)
+    .insert({
+      name: dto.name,
+      slug,
+      season: dto.season,
+      status: "DRAFT",
+      format: dto.format,
+      start_date: dto.start_date || null,
+      end_date: dto.end_date || null,
+      description: dto.description || null,
+    })
+    .select()
+    .single();
+
+  if (tErr || !tournamentData) {
+    console.error("Error creating tournament:", tErr);
+    throw new Error(tErr?.message || "Failed to create tournament.");
+  }
+
+  // 2. Insert settings row
+  const { data: settingsData, error: sErr } = await (supabase
+    .from("tournament_settings") as any)
+    .insert({
+      tournament_id: tournamentData.id,
       num_groups: dto.num_groups,
       teams_per_group: dto.teams_per_group,
       max_teams: dto.max_teams,
@@ -469,25 +325,31 @@ export async function createTournament(
       points_for_draw: dto.points_for_draw,
       points_for_loss: dto.points_for_loss,
       allow_draws_in_group: dto.allow_draws_in_group,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  };
+    })
+    .select()
+    .single();
 
-  MOCK_TOURNAMENTS.unshift(newTournament);
-  return newTournament;
+  if (sErr) {
+    console.warn("Warning inserting settings:", sErr);
+  }
+
+  return formatTournamentRow({
+    ...tournamentData,
+    tournament_settings: settingsData,
+  });
 }
 
 export async function updateTournament(
   id: string,
   dto: Partial<CreateTournamentDTO> & { status?: TournamentStatus }
 ): Promise<TournamentWithSettings> {
-  const index = MOCK_TOURNAMENTS.findIndex((t) => t.id === id);
-  if (index === -1) {
+  const supabase = createClient();
+
+  // Check format lock
+  const existing = await fetchTournamentById(id);
+  if (!existing) {
     throw new Error(`Tournament with ID ${id} not found.`);
   }
-
-  const existing = MOCK_TOURNAMENTS[index];
 
   if (dto.format && dto.format !== existing.format && isFormatLocked(existing.status)) {
     throw new Error(
@@ -495,42 +357,71 @@ export async function updateTournament(
     );
   }
 
-  const updated: TournamentWithSettings = {
-    ...existing,
-    name: dto.name ?? existing.name,
-    season: dto.season ?? existing.season,
-    description: dto.description !== undefined ? dto.description : existing.description,
-    start_date: dto.start_date !== undefined ? dto.start_date : existing.start_date,
-    end_date: dto.end_date !== undefined ? dto.end_date : existing.end_date,
-    format: dto.format ?? existing.format,
-    status: dto.status ?? existing.status,
-    updated_at: new Date().toISOString(),
-    settings: existing.settings
-      ? {
-          ...existing.settings,
-          num_groups: dto.num_groups ?? existing.settings.num_groups,
-          teams_per_group: dto.teams_per_group ?? existing.settings.teams_per_group,
-          max_teams: dto.max_teams ?? existing.settings.max_teams,
-          teams_advancing_per_group:
-            dto.teams_advancing_per_group ?? existing.settings.teams_advancing_per_group,
-          points_for_win: dto.points_for_win ?? existing.settings.points_for_win,
-          points_for_draw: dto.points_for_draw ?? existing.settings.points_for_draw,
-          points_for_loss: dto.points_for_loss ?? existing.settings.points_for_loss,
-          allow_draws_in_group:
-            dto.allow_draws_in_group !== undefined
-              ? dto.allow_draws_in_group
-              : existing.settings.allow_draws_in_group,
-          updated_at: new Date().toISOString(),
-        }
-      : undefined,
-  };
+  // Update tournament main fields
+  const tUpdate: any = { updated_at: new Date().toISOString() };
+  if (dto.name !== undefined) {
+    tUpdate.name = dto.name;
+    tUpdate.slug = dto.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+  if (dto.season !== undefined) tUpdate.season = dto.season;
+  if (dto.description !== undefined) tUpdate.description = dto.description;
+  if (dto.start_date !== undefined) tUpdate.start_date = dto.start_date;
+  if (dto.end_date !== undefined) tUpdate.end_date = dto.end_date;
+  if (dto.format !== undefined) tUpdate.format = dto.format;
+  if (dto.status !== undefined) tUpdate.status = dto.status;
 
-  MOCK_TOURNAMENTS[index] = updated;
-  return updated;
+  const { data: updatedT, error: tErr } = await (supabase
+    .from("tournaments") as any)
+    .update(tUpdate)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (tErr) {
+    console.error("Error updating tournament:", tErr);
+    throw new Error(tErr.message || "Failed to update tournament.");
+  }
+
+  // Update settings fields if present
+  let updatedSettings = existing.settings;
+  const sUpdate: any = { updated_at: new Date().toISOString() };
+  if (dto.num_groups !== undefined) sUpdate.num_groups = dto.num_groups;
+  if (dto.teams_per_group !== undefined) sUpdate.teams_per_group = dto.teams_per_group;
+  if (dto.max_teams !== undefined) sUpdate.max_teams = dto.max_teams;
+  if (dto.teams_advancing_per_group !== undefined)
+    sUpdate.teams_advancing_per_group = dto.teams_advancing_per_group;
+  if (dto.points_for_win !== undefined) sUpdate.points_for_win = dto.points_for_win;
+  if (dto.points_for_draw !== undefined) sUpdate.points_for_draw = dto.points_for_draw;
+  if (dto.points_for_loss !== undefined) sUpdate.points_for_loss = dto.points_for_loss;
+  if (dto.allow_draws_in_group !== undefined)
+    sUpdate.allow_draws_in_group = dto.allow_draws_in_group;
+
+  if (Object.keys(sUpdate).length > 1) {
+    const { data: sData } = await (supabase
+      .from("tournament_settings") as any)
+      .update(sUpdate)
+      .eq("tournament_id", id)
+      .select()
+      .single();
+
+    if (sData) updatedSettings = sData;
+  }
+
+  return formatTournamentRow({
+    ...updatedT,
+    tournament_settings: updatedSettings,
+  });
 }
 
 export async function deleteTournament(id: string): Promise<boolean> {
-  const initialLength = MOCK_TOURNAMENTS.length;
-  MOCK_TOURNAMENTS = MOCK_TOURNAMENTS.filter((t) => t.id !== id);
-  return MOCK_TOURNAMENTS.length < initialLength;
+  const supabase = createClient();
+  const { error } = await (supabase.from("tournaments") as any).delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting tournament:", error);
+    return false;
+  }
+  return true;
 }

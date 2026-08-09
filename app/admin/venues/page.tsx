@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Table, TableHead, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -285,17 +285,17 @@ function AdminVenuesContent() {
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)]">
             <Table>
-              <TableHeader>
+              <TableHead>
                 <TableRow>
-                  <TableHead>Venue Name</TableHead>
-                  <TableHead>Short Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Operating Hours</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHeader>Venue Name</TableHeader>
+                  <TableHeader>Short Name</TableHeader>
+                  <TableHeader>Location</TableHeader>
+                  <TableHeader>Capacity</TableHeader>
+                  <TableHeader>Operating Hours</TableHeader>
+                  <TableHeader>Status</TableHeader>
+                  <TableHeader className="text-right">Actions</TableHeader>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {result.data.map((venue) => (
                   <TableRow key={venue.id}>

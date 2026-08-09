@@ -1,53 +1,57 @@
-import { PageHeader } from "@/components/ui/PageHeader";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useTournament } from "@/lib/context/TournamentContext";
 import { Button } from "@/components/ui/Button";
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from "@/components/ui/Table";
-import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
-export const metadata = {
-  title: "Teams Management",
-};
+/**
+ * /admin/teams — Smart redirect shim.
+ *
+ * Teams are scoped to a tournament. This page reads the active tournament
+ * from TournamentContext and immediately redirects to
+ * /admin/tournaments/[id]/teams. If no tournament is selected, it shows
+ * a helpful prompt to navigate to Tournaments first.
+ */
+export default function AdminTeamsRedirectPage() {
+  const router = useRouter();
+  const { currentTournament, isLoading } = useTournament();
 
-export default function AdminTeamsPage() {
+  useEffect(() => {
+    if (!isLoading && currentTournament?.id) {
+      router.replace(`/admin/tournaments/${currentTournament.id}/teams`);
+    }
+  }, [isLoading, currentTournament, router]);
+
+  // While loading context or redirecting, show a neutral state
+  if (isLoading || currentTournament?.id) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="flex flex-col items-center gap-3 text-[var(--color-text-muted)]">
+          <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm">Redirecting to teams…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // No active tournament — guide the admin
   return (
-    <div>
-      <PageHeader
-        title="Teams Management"
-        subtitle="Manage participating clubs, rosters, and group allocations"
-        actions={<Button size="sm">+ Register New Team</Button>}
-      />
-
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableHeader>#</TableHeader>
-            <TableHeader>Team Name</TableHeader>
-            <TableHeader>Manager</TableHeader>
-            <TableHeader align="center">Group</TableHeader>
-            <TableHeader align="center">Status</TableHeader>
-            <TableHeader align="right">Actions</TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <TableRow>
-            <TableCell muted>1</TableCell>
-            <TableCell>
-              <span className="font-display font-bold text-sm text-[var(--color-primary)]">
-                Oddamavadi FC
-              </span>
-            </TableCell>
-            <TableCell>A. Rahman</TableCell>
-            <TableCell align="center">
-              <Badge variant="neutral" size="sm">Group A</Badge>
-            </TableCell>
-            <TableCell align="center">
-              <Badge variant="success" size="sm">Registered</Badge>
-            </TableCell>
-            <TableCell align="right">
-              <Button variant="ghost" size="sm">Edit</Button>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <EmptyState
+      title="No tournament selected"
+      description="Teams are registered under a specific tournament. Please select or create a tournament first, then manage its teams."
+      action={
+        <div className="flex items-center gap-3">
+          <Link href="/admin/tournaments">
+            <Button size="sm">Browse Tournaments</Button>
+          </Link>
+          <Link href="/admin/tournaments/new">
+            <Button size="sm" variant="outline">Create Tournament</Button>
+          </Link>
+        </div>
+      }
+    />
   );
 }

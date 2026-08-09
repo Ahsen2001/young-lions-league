@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Table, TableHead, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/Table";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
 import { downloadSampleCSVTemplate } from "@/lib/utils/csv-template";
@@ -337,16 +337,16 @@ export default function BulkImportTeamsPage({
           {/* Interactive Preview Table */}
           <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)]">
             <Table>
-              <TableHeader>
+              <TableHead>
                 <TableRow>
-                  <TableHead className="w-16">Row #</TableHead>
-                  <TableHead>Team Name</TableHead>
-                  <TableHead>Short Code</TableHead>
-                  <TableHead>Reg Number</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>Validation Status</TableHead>
+                  <TableHeader className="w-16">Row #</TableHeader>
+                  <TableHeader>Team Name</TableHeader>
+                  <TableHeader>Short Code</TableHeader>
+                  <TableHeader>Reg Number</TableHeader>
+                  <TableHeader>Manager</TableHeader>
+                  <TableHeader>Validation Status</TableHeader>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {filteredPreviewRows.length === 0 ? (
                   <TableRow>

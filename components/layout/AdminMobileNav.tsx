@@ -139,14 +139,29 @@ export default function AdminMobileNav() {
             {/* Nav Items */}
             <nav className="flex-1 overflow-y-auto p-3 space-y-1">
               {ADMIN_NAV_ITEMS.map((item) => {
-                const active =
-                  item.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname.startsWith(item.href);
+                const resolvedHref =
+                  item.label === "Teams" && currentTournament?.id
+                    ? `/admin/tournaments/${currentTournament.id}/teams`
+                    : item.href;
+
+                let active = false;
+                if (item.href === "/admin") {
+                  active = pathname === "/admin";
+                } else if (item.label === "Teams") {
+                  active = pathname.includes("/teams");
+                } else if (item.label === "Tournaments") {
+                  active =
+                    pathname.startsWith("/admin/tournaments") &&
+                    !pathname.includes("/teams");
+                } else {
+                  active = pathname.startsWith(item.href);
+                }
+
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={resolvedHref}
+                    onClick={() => setOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] font-display text-sm tracking-widest uppercase transition-colors",
                       active

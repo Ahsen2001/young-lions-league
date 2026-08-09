@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
+import { Table, TableHead, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -274,17 +274,17 @@ function AdminTeamsContent({ id }: { id: string }) {
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-card)]">
             <Table>
-              <TableHeader>
+              <TableHead>
                 <TableRow>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Reg Number</TableHead>
-                  <TableHead>Manager & Captain</TableHead>
-                  <TableHead>Group Allocation</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHeader>Team</TableHeader>
+                  <TableHeader>Code</TableHeader>
+                  <TableHeader>Reg Number</TableHeader>
+                  <TableHeader>Manager & Captain</TableHeader>
+                  <TableHeader>Group Allocation</TableHeader>
+                  <TableHeader>Status</TableHeader>
+                  <TableHeader className="text-right">Actions</TableHeader>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {result.data.map((team) => (
                   <TableRow key={team.id}>

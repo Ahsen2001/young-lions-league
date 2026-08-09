@@ -1,3 +1,21 @@
+import fs from "fs";
+import path from "path";
+
+try {
+  const envPath = path.resolve(process.cwd(), ".env.local");
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, "utf8");
+    envFile.split("\n").forEach((line) => {
+      const [k, ...v] = line.trim().split("=");
+      if (k && v.length) {
+        process.env[k.trim()] = v.join("=").trim();
+      }
+    });
+  }
+} catch {
+  // Ignore env read error
+}
+
 import { runTournamentValidationTests } from "../lib/validation/__tests__/tournament.test";
 import { runTournamentPaginationTests } from "../lib/services/__tests__/tournament.pagination.test";
 import { runVenueTests } from "../lib/services/__tests__/venue.test";
