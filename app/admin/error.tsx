@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Button } from "@/components/ui/Button";
 
-export default function GlobalError({
+export default function AdminError({
   error,
   retry,
 }: {
@@ -12,23 +12,23 @@ export default function GlobalError({
   retry: () => void;
 }) {
   useEffect(() => {
-    console.error("[GlobalError]", error);
+    console.error("[AdminError]", error);
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-6">
+    <div className="py-12 px-4 flex items-center justify-center">
       <ErrorState
-        title="Application Error"
-        description="We encountered an unexpected problem loading this page. Please try again."
-        detail={error.digest ? `Error ID: ${error.digest}` : error.message}
+        title="Admin Portal Error"
+        description="An error occurred while loading this admin section. Official competition records remain safe."
+        detail={error.digest ? `Error Digest: ${error.digest}` : error.message}
         action={
           <div className="flex gap-3 justify-center">
             <Button size="sm" onClick={() => retry()}>
-              Try again
+              Retry Request
             </Button>
-            <a href="/">
+            <a href="/admin">
               <Button size="sm" variant="outline">
-                Return to Home
+                Back to Dashboard
               </Button>
             </a>
           </div>

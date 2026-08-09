@@ -7,7 +7,18 @@
 export { Spinner } from "./Spinner";
 export type { SpinnerProps } from "./Spinner";
 
-export { Skeleton, SkeletonCard, SkeletonRow, SkeletonText, SkeletonAvatar } from "./Skeleton";
+export {
+  Skeleton,
+  SkeletonCard,
+  SkeletonMatchCard,
+  SkeletonTournamentCard,
+  SkeletonStandings,
+  SkeletonTable,
+  SkeletonGrid,
+  SkeletonRow,
+  SkeletonText,
+  SkeletonAvatar,
+} from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";
 
 export { Button } from "./Button";
