@@ -1,6 +1,7 @@
 "use client";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Slottable } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 /* ── Content ─────────────────────────────────────────────────────────── */
@@ -61,7 +62,7 @@ const Item = ({
         {icon}
       </span>
     )}
-    {children}
+    <Slottable>{children}</Slottable>
   </DropdownMenuPrimitive.Item>
 );
 
