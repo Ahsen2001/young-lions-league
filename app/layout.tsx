@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Oswald, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/Toast";
+import { TournamentProvider } from "@/lib/context/TournamentContext";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -39,8 +40,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)] font-body antialiased">
-        {children}
-        <Toaster />
+        <TournamentProvider>
+          {children}
+          <Toaster />
+        </TournamentProvider>
       </body>
     </html>
   );
