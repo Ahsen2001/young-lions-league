@@ -27,7 +27,7 @@ export default function PublicTournamentPage() {
               <h2 className="font-display text-xl font-bold text-[var(--color-primary)]">
                 League Structure & Regulations
               </h2>
-              <TournamentStatusBadge status="group_stage" />
+              <TournamentStatusBadge status="TOURNAMENT_IN_PROGRESS" />
             </div>
             <p className="text-sm text-[var(--color-text-muted)]">
               The Young Lions Football League operates on a combined Group Stage and Knockout format. 16 teams compete across 4 groups, with top teams advancing to the quarterfinals.

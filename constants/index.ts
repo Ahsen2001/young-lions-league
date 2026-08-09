@@ -18,13 +18,18 @@ export const MAX_GROUPS = 8;
 
 /** Status display labels */
 export const TOURNAMENT_STATUS_LABELS: Record<TournamentStatus, string> = {
-  draft: "Draft",
-  registration: "Registration",
-  draw_pending: "Draw Pending",
-  group_stage: "Group Stage",
-  knockout: "Knockout",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  DRAFT: "Draft",
+  REGISTRATION_OPEN: "Registration Open",
+  READY_FOR_DRAW: "Ready for Draw",
+  DRAW_IN_PROGRESS: "Draw in Progress",
+  DRAW_COMPLETED: "Draw Completed",
+  DRAW_LOCKED: "Draw Locked",
+  FIXTURES_GENERATED: "Fixtures Generated",
+  TOURNAMENT_IN_PROGRESS: "In Progress",
+  GROUP_STAGE_COMPLETED: "Group Stage Completed",
+  KNOCKOUT_IN_PROGRESS: "Knockout Stage",
+  FINAL_READY: "Final Ready",
+  COMPLETED: "Completed",
 };
 
 /** Status badge color classes (bg + text — never color alone) */
@@ -32,11 +37,16 @@ export const TOURNAMENT_STATUS_COLORS: Record<
   TournamentStatus,
   { bg: string; text: string; label: string }
 > = {
-  draft: { bg: "bg-[var(--color-bg-muted)]", text: "text-[var(--color-text-muted)]", label: "Draft" },
-  registration: { bg: "bg-blue-100", text: "text-blue-800", label: "Registration Open" },
-  draw_pending: { bg: "bg-amber-100", text: "text-amber-800", label: "Draw Pending" },
-  group_stage: { bg: "bg-[var(--color-secondary)]/20", text: "text-[var(--color-primary)]", label: "Group Stage" },
-  knockout: { bg: "bg-[var(--color-accent)]/20", text: "text-[var(--color-primary)]", label: "Knockout" },
-  completed: { bg: "bg-green-100", text: "text-green-800", label: "Completed" },
-  cancelled: { bg: "bg-red-100", text: "text-red-800", label: "Cancelled" },
+  DRAFT: { bg: "bg-[var(--color-bg-muted)]", text: "text-[var(--color-text-muted)]", label: "Draft" },
+  REGISTRATION_OPEN: { bg: "bg-blue-100", text: "text-blue-800", label: "Registration Open" },
+  READY_FOR_DRAW: { bg: "bg-amber-100", text: "text-amber-800", label: "Ready for Draw" },
+  DRAW_IN_PROGRESS: { bg: "bg-amber-100", text: "text-amber-800", label: "Draw in Progress" },
+  DRAW_COMPLETED: { bg: "bg-blue-100", text: "text-blue-800", label: "Draw Completed" },
+  DRAW_LOCKED: { bg: "bg-purple-100", text: "text-purple-800", label: "Draw Locked" },
+  FIXTURES_GENERATED: { bg: "bg-blue-100", text: "text-blue-800", label: "Fixtures Generated" },
+  TOURNAMENT_IN_PROGRESS: { bg: "bg-[var(--color-secondary)]/20", text: "text-[var(--color-primary)]", label: "In Progress" },
+  GROUP_STAGE_COMPLETED: { bg: "bg-indigo-100", text: "text-indigo-800", label: "Group Stage Done" },
+  KNOCKOUT_IN_PROGRESS: { bg: "bg-[var(--color-accent)]/20", text: "text-[var(--color-primary)]", label: "Knockout" },
+  FINAL_READY: { bg: "bg-purple-100", text: "text-purple-800", label: "Final Ready" },
+  COMPLETED: { bg: "bg-green-100", text: "text-green-800", label: "Completed" },
 };

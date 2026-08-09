@@ -25,7 +25,7 @@ export default function AdminTournamentsPage() {
               </h3>
               <p className="text-xs text-[var(--color-text-muted)]">Season 2025</p>
             </div>
-            <TournamentStatusBadge status="group_stage" />
+            <TournamentStatusBadge status="TOURNAMENT_IN_PROGRESS" />
           </CardHeader>
           <CardBody>
             <p className="text-xs text-[var(--color-text-muted)] mb-3">

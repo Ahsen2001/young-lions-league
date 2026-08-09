@@ -1,15 +1,14 @@
 /**
- * Team domain types.
+ * Team, Group, and Draw Domain Types
  */
 
 export interface Team {
   id: string;
+  tournament_id: string;
   name: string;
-  slug: string;
   short_name: string;
+  slug: string;
   logo_url: string | null;
-  primary_color: string | null;
-  home_venue: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   is_active: boolean;
@@ -17,7 +16,6 @@ export interface Team {
   updated_at: string;
 }
 
-/** Lightweight reference used in fixtures, draws, standings */
 export interface TeamRef {
   id: string;
   name: string;
@@ -25,11 +23,43 @@ export interface TeamRef {
   logo_url: string | null;
 }
 
-export interface TournamentTeam {
+export interface Group {
+  id: string;
+  tournament_id: string;
+  name: string;
+  max_teams: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMembership {
+  id: string;
+  tournament_id: string;
+  group_id: string;
+  team_id: string;
+  seed: number | null;
+  allocated_at: string;
+  team?: TeamRef;
+}
+
+export interface DrawRecord {
+  id: string;
   tournament_id: string;
   team_id: string;
-  group_id: string | null;
-  seed: number | null;
-  registered_at: string;
-  team: TeamRef;
+  group_id: string;
+  pot_number: number | null;
+  drawn_position: number | null;
+  drawn_by: string | null;
+  drawn_at: string;
+  team?: TeamRef;
+  group?: Group;
+}
+
+export interface DrawAuditLog {
+  id: string;
+  tournament_id: string;
+  action: string;
+  performed_by: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
 }

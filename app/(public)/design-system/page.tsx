@@ -113,13 +113,18 @@ const teamData = [
 ];
 
 const tournamentStatuses: TournamentStatus[] = [
-  "draft",
-  "registration",
-  "draw_pending",
-  "group_stage",
-  "knockout",
-  "completed",
-  "cancelled",
+  "DRAFT",
+  "REGISTRATION_OPEN",
+  "READY_FOR_DRAW",
+  "DRAW_IN_PROGRESS",
+  "DRAW_COMPLETED",
+  "DRAW_LOCKED",
+  "FIXTURES_GENERATED",
+  "TOURNAMENT_IN_PROGRESS",
+  "GROUP_STAGE_COMPLETED",
+  "KNOCKOUT_IN_PROGRESS",
+  "FINAL_READY",
+  "COMPLETED",
 ];
 
 /* ── Page ────────────────────────────────────────────────────────────── */
@@ -366,7 +371,7 @@ export default function DesignSystemPage() {
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)]">Week 3 · 4 matches played</p>
                 </div>
-                <TournamentStatusBadge status="group_stage" />
+                <TournamentStatusBadge status="TOURNAMENT_IN_PROGRESS" />
               </CardHeader>
               <CardBody>
                 <p className="text-sm text-[var(--color-text-muted)]">
