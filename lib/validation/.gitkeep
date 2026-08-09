@@ -1,0 +1,5 @@
+/**
+ * lib/validation — Zod schemas and validation helpers.
+ * One file per domain: tournament.schema.ts, team.schema.ts, etc.
+ * Populated when each domain form is built.
+ */

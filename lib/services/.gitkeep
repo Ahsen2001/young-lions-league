@@ -1,0 +1,5 @@
+/**
+ * lib/services — Data access service layer.
+ * Each file maps to a domain: tournament.service.ts, team.service.ts, etc.
+ * Populated in their respective domain sprints.
+ */

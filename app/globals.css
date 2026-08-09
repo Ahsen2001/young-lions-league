@@ -1,26 +1,161 @@
+/* ─── Google Fonts — must precede all other rules ───────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap");
+
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand palette */
+  --color-primary:    #234F2D;
+  --color-primary-dark: #1a3b21;
+  --color-primary-light: #2d6438;
+  --color-secondary:  #A0AF2A;
+  --color-secondary-dark: #7d8c20;
+  --color-secondary-light: #b8c83d;
+  --color-accent:     #E1B32C;
+  --color-accent-dark: #c49920;
+  --color-accent-light: #f0c94a;
+
+  /* Surfaces */
+  --color-bg:         #F8F7F1;
+  --color-bg-card:    #FFFFFF;
+  --color-bg-muted:   #EFEDE6;
+  --color-border:     #D9D7CE;
+  --color-border-strong: #B8B6AE;
+
+  /* Typography */
+  --color-text:       #1A1A1A;
+  --color-text-muted: #5C5C5C;
+  --color-text-subtle: #8A8A8A;
+  --color-text-inverse: #FFFFFF;
+
+  /* Status */
+  --color-success:    #22C55E;
+  --color-warning:    #F59E0B;
+  --color-error:      #EF4444;
+  --color-info:       #3B82F6;
+
+  /* Fonts */
+  --font-display: "Oswald", sans-serif;
+  --font-body:    "Inter", sans-serif;
+
+  /* Spacing scale */
+  --spacing-page-x: clamp(1rem, 5vw, 4rem);
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px 0 rgb(0 0 0 / 0.08);
+  --shadow-md:  0 4px 12px 0 rgb(0 0 0 / 0.10);
+  --shadow-lg:  0 8px 24px 0 rgb(0 0 0 / 0.12);
+
+  /* Radii */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
+/* ─── Tailwind v4 Theme Extension ───────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary:        var(--color-primary);
+  --color-primary-dark:   var(--color-primary-dark);
+  --color-primary-light:  var(--color-primary-light);
+  --color-secondary:      var(--color-secondary);
+  --color-secondary-dark: var(--color-secondary-dark);
+  --color-accent:         var(--color-accent);
+  --color-accent-dark:    var(--color-accent-dark);
+  --color-bg:             var(--color-bg);
+  --color-bg-card:        var(--color-bg-card);
+  --color-bg-muted:       var(--color-bg-muted);
+  --color-border:         var(--color-border);
+  --color-text:           var(--color-text);
+  --color-text-muted:     var(--color-text-muted);
+  --color-text-subtle:    var(--color-text-subtle);
+  --color-text-inverse:   var(--color-text-inverse);
+  --color-success:        var(--color-success);
+  --color-warning:        var(--color-warning);
+  --color-error:          var(--color-error);
+  --font-display:         var(--font-display);
+  --font-body:            var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Reset & Typography ───────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Display / Heading Typography ─────────────────────────────────── */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+/* ─── Focus Styles ──────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Skeleton Loading Animation ────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.skeleton {
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Smooth Page Transitions ───────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fade-in 200ms ease forwards;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-subtle);
 }

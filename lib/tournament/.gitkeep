@@ -1,0 +1,5 @@
+/**
+ * lib/tournament — Tournament business logic (draw, group assignment, etc.)
+ * Kept outside React components to be testable and reusable.
+ * Populated in the Tournament sprint.
+ */
