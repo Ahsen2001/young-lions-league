@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV_ITEMS, ROUTE_LABELS } from "@/constants/navigation";
 import { useTournament } from "@/lib/context/TournamentContext";
 import { Select } from "@/components/ui/Select";
+import { signOutClient } from "@/lib/supabase/auth-client";
+import { toast } from "@/components/ui/Toast";
 
 export default function AdminMobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { currentTournament, tournaments, setCurrentTournament } = useTournament();
 
@@ -29,6 +32,18 @@ export default function AdminMobileNav() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  const handleSignOut = async () => {
+    try {
+      setOpen(false);
+      await signOutClient();
+      toast.success("Signed Out", "You have been logged out.");
+      router.push("/admin/login");
+      router.refresh();
+    } catch {
+      router.push("/admin/login");
+    }
+  };
 
   // Get active route title
   const currentSegment = pathname.split("/").filter(Boolean).pop() || "admin";
@@ -160,7 +175,7 @@ export default function AdminMobileNav() {
               </div>
               <button
                 type="button"
-                onClick={() => alert("Logged out.")}
+                onClick={handleSignOut}
                 className="p-1.5 rounded text-white/70 hover:text-white hover:bg-white/10"
                 title="Log out"
               >

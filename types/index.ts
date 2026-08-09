@@ -9,3 +9,4 @@ export type {
   TournamentFormat,
 } from "./tournament";
 export type { Team, TeamRef, TournamentTeam } from "./team";
+export type { UserRole, UserProfile, AuthState } from "./auth";

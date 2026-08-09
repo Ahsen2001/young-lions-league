@@ -1,13 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Badge } from "@/components/ui/Badge";
 import AdminBreadcrumbs from "./AdminBreadcrumbs";
 import { useTournament } from "@/lib/context/TournamentContext";
+import { signOutClient } from "@/lib/supabase/auth-client";
+import { toast } from "@/components/ui/Toast";
 
 export default function AdminHeader() {
   const { currentTournament } = useTournament();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutClient();
+      toast.success("Signed Out", "You have been logged out.");
+      router.push("/admin/login");
+      router.refresh();
+    } catch {
+      router.push("/admin/login");
+    }
+  };
 
   return (
     <header className="hidden lg:flex h-16 shrink-0 items-center justify-between px-8 bg-[var(--color-bg-card)] border-b border-[var(--color-border)] sticky top-0 z-30">
@@ -92,9 +107,7 @@ export default function AdminHeader() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               }
-              onSelect={() => {
-                alert("Logged out successfully.");
-              }}
+              onSelect={handleSignOut}
             >
               Log Out
             </DropdownMenu.Item>
