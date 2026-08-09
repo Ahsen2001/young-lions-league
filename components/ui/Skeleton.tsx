@@ -1,19 +1,11 @@
 import { cn } from "@/lib/utils";
 
-interface SkeletonProps {
+/* ── Inline skeleton ─────────────────────────────────────────────────── */
+export interface SkeletonProps {
   className?: string;
-  /** Height in Tailwind class form e.g. "h-4" */
-  height?: string;
-  /** Width in Tailwind class form e.g. "w-full" or "w-32" */
-  width?: string;
-  /** Render as a circle (avatar placeholder) */
   circle?: boolean;
 }
 
-/**
- * Skeleton — inline content placeholder.
- * Use in loading.tsx and suspense fallbacks to prevent layout shift.
- */
 export function Skeleton({ className, circle = false }: SkeletonProps) {
   return (
     <div
@@ -27,7 +19,7 @@ export function Skeleton({ className, circle = false }: SkeletonProps) {
   );
 }
 
-/** Pre-built skeleton for a single card */
+/* ── Pre-built card skeleton ─────────────────────────────────────────── */
 export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
@@ -36,14 +28,21 @@ export function SkeletonCard({ className }: { className?: string }) {
         className
       )}
     >
-      <Skeleton className="h-4 w-2/3" />
+      <div className="flex items-center gap-3">
+        <Skeleton circle className="w-9 h-9 shrink-0" />
+        <div className="flex-1 flex flex-col gap-2">
+          <Skeleton className="h-3 w-2/3" />
+          <Skeleton className="h-2.5 w-1/2" />
+        </div>
+      </div>
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-4/5" />
+      <Skeleton className="h-3 w-3/5" />
     </div>
   );
 }
 
-/** Pre-built skeleton for a table row */
+/* ── Pre-built table-row skeleton ────────────────────────────────────── */
 export function SkeletonRow({ columns = 4 }: { columns?: number }) {
   return (
     <div className="flex items-center gap-4 py-3 px-4 border-b border-[var(--color-border)]">
@@ -52,4 +51,28 @@ export function SkeletonRow({ columns = 4 }: { columns?: number }) {
       ))}
     </div>
   );
+}
+
+/* ── Pre-built text block skeleton ──────────────────────────────────── */
+export function SkeletonText({ lines = 3 }: { lines?: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton
+          key={i}
+          className={cn("h-3", i === lines - 1 ? "w-3/5" : "w-full")}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Pre-built avatar skeleton ───────────────────────────────────────── */
+export function SkeletonAvatar({
+  size = "md",
+}: {
+  size?: "sm" | "md" | "lg";
+}) {
+  const s = { sm: "w-8 h-8", md: "w-10 h-10", lg: "w-14 h-14" }[size];
+  return <Skeleton circle className={s} />;
 }

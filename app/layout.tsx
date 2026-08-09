@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Oswald, Inter } from "next/font/google";
+import { Toaster } from "@/components/ui/Toast";
 import "./globals.css";
 
 const oswald = Oswald({
@@ -39,6 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-text)] font-body antialiased">
         {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -35,6 +35,15 @@
   --color-error:      #EF4444;
   --color-info:       #3B82F6;
 
+  /* Status surfaces */
+  --color-success-bg: #f0fdf4;
+  --color-warning-bg: #fffbeb;
+  --color-error-bg:   #fef2f2;
+  --color-info-bg:    #eff6ff;
+
+  /* Overlay */
+  --color-overlay:    rgb(0 0 0 / 0.55);
+
   /* Fonts */
   --font-display: "Oswald", sans-serif;
   --font-body:    "Inter", sans-serif;
@@ -139,6 +148,32 @@ h1, h2, h3, h4, h5, h6,
 
 .page-enter {
   animation: fade-in 200ms ease forwards;
+}
+
+/* ─── Radix Portal / Overlay Animations ─────────────────────────────── */
+@keyframes overlay-show {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes overlay-hide {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes content-show {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes content-hide {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────── */
