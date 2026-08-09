@@ -138,6 +138,8 @@ export interface TableCellProps {
   className?: string;
   align?: "left" | "center" | "right";
   muted?: boolean;
+  colSpan?: number;
+  rowSpan?: number;
 }
 
 export function TableCell({
@@ -145,9 +147,13 @@ export function TableCell({
   className,
   align = "left",
   muted = false,
+  colSpan,
+  rowSpan,
 }: TableCellProps) {
   return (
     <td
+      colSpan={colSpan}
+      rowSpan={rowSpan}
       className={cn(
         "px-4 py-3",
         align === "center" && "text-center",

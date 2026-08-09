@@ -149,6 +149,11 @@ function AdminTeamsContent({ id }: { id: string }) {
                 + Register Team
               </Button>
             </Link>
+            <Link href={`/admin/tournaments/${id}/teams/import`}>
+              <Button size="sm" variant="secondary" disabled={!modifiable}>
+                Import CSV
+              </Button>
+            </Link>
             <Link href={`/admin/tournaments/${id}`}>
               <Button size="sm" variant="outline">
                 Back to Overview

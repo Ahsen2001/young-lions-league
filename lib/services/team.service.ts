@@ -311,3 +311,53 @@ export async function deleteTeam(
   }
   return { success: false, error: "Team not found." };
 }
+
+export async function bulkCreateTeams(
+  tournamentId: string,
+  dtos: CreateTeamDTO[],
+  tournamentStatus?: TournamentStatus
+): Promise<{ importedCount: number; teams: Team[] }> {
+  if (tournamentStatus && !canModifyTeams(tournamentStatus)) {
+    throw new Error("Cannot import teams. Tournament lifecycle is locked.");
+  }
+
+  const createdTeams: Team[] = [];
+
+  for (const dto of dtos) {
+    const id = `tm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const slug = dto.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const regNum = dto.registration_number || `REG-2025-${Math.floor(100 + Math.random() * 900)}`;
+
+    const newTeam: Team = {
+      id,
+      tournament_id: tournamentId,
+      name: dto.name,
+      short_name: dto.short_name.toUpperCase(),
+      slug,
+      logo_url: dto.logo_url || null,
+      registration_number: regNum,
+      manager_name: dto.manager_name || null,
+      captain_name: dto.captain_name || null,
+      contact_phone: dto.contact_phone || null,
+      contact_email: dto.contact_email || null,
+      status: dto.status || "APPROVED",
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+      group_id: null,
+      group_name: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    MOCK_TEAMS.unshift(newTeam);
+    createdTeams.push(newTeam);
+  }
+
+  return {
+    importedCount: createdTeams.length,
+    teams: createdTeams,
+  };
+}
