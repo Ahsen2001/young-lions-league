@@ -26,6 +26,8 @@ export type TournamentStatus =
   | "FINAL_READY"
   | "COMPLETED";
 
+export type TeamStatus = "APPROVED" | "PENDING" | "INACTIVE";
+
 export type TournamentFormat =
   | "GROUP_SEMI_FINAL"
   | "GROUP_QUARTER_SEMI_FINAL"
@@ -203,9 +205,14 @@ export interface Database {
           short_name: string;
           slug: string;
           logo_url: string | null;
-          contact_name: string | null;
+          registration_number: string | null;
+          manager_name: string | null;
+          captain_name: string | null;
           contact_phone: string | null;
+          contact_email: string | null;
+          status: TeamStatus;
           is_active: boolean;
+          group_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -216,9 +223,14 @@ export interface Database {
           short_name: string;
           slug: string;
           logo_url?: string | null;
-          contact_name?: string | null;
+          registration_number?: string | null;
+          manager_name?: string | null;
+          captain_name?: string | null;
           contact_phone?: string | null;
+          contact_email?: string | null;
+          status?: TeamStatus;
           is_active?: boolean;
+          group_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -229,9 +241,14 @@ export interface Database {
           short_name?: string;
           slug?: string;
           logo_url?: string | null;
-          contact_name?: string | null;
+          registration_number?: string | null;
+          manager_name?: string | null;
+          captain_name?: string | null;
           contact_phone?: string | null;
+          contact_email?: string | null;
+          status?: TeamStatus;
           is_active?: boolean;
+          group_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -2,6 +2,8 @@
  * Team, Group, and Draw Domain Types
  */
 
+export type TeamStatus = "APPROVED" | "PENDING" | "INACTIVE";
+
 export interface Team {
   id: string;
   tournament_id: string;
@@ -9,9 +11,15 @@ export interface Team {
   short_name: string;
   slug: string;
   logo_url: string | null;
-  contact_name: string | null;
+  registration_number: string | null;
+  manager_name: string | null;
+  captain_name: string | null;
   contact_phone: string | null;
+  contact_email: string | null;
+  status: TeamStatus;
   is_active: boolean;
+  group_id: string | null;
+  group_name: string | null;
   created_at: string;
   updated_at: string;
 }

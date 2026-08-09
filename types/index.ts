@@ -11,6 +11,7 @@ export type {
 } from "./tournament";
 export type {
   Team,
+  TeamStatus,
   TeamRef,
   Group,
   GroupMembership,
