@@ -35,6 +35,7 @@ DROP POLICY IF EXISTS "Admin write matches" ON public.matches;
 
 CREATE POLICY "Allow write tournaments" ON public.tournaments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow write teams" ON public.teams FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow write venues" ON public.venues FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow write groups" ON public.groups FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow write group memberships" ON public.group_memberships FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow write draw records" ON public.draw_records FOR ALL USING (true) WITH CHECK (true);

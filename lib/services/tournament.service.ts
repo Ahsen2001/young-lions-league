@@ -246,6 +246,17 @@ export async function fetchTournaments(
   const { data, count, error } = await query;
 
   if (error) {
+    if (error.code === "PGRST103") {
+      return {
+        data: [],
+        total: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize) || 1,
+        from: 0,
+        to: 0,
+      };
+    }
     console.error("Error fetching tournaments from Supabase:", error);
     throw new Error(error.message || "Failed to fetch tournaments.");
   }

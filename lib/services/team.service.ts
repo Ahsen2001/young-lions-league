@@ -185,9 +185,18 @@ export async function fetchTeams(
   const page = Math.max(1, params?.page || 1);
   const pageSize = Math.max(1, params?.pageSize || 10);
 
+  const isUUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tournamentId);
+
   let query: any = (supabase.from("teams") as any)
-    .select("*", { count: "exact" })
-    .eq("tournament_id", tournamentId);
+    .select("*", { count: "exact" });
+
+  if (isUUID) {
+    query = query.eq("tournament_id", tournamentId);
+  } else {
+    // Legacy mock ID string mapping or fallback
+    query = query.or(`tournament_id.eq.${tournamentId},slug.ilike.%${tournamentId}%`);
+  }
 
   // Search filter
   if (params?.search?.trim()) {
@@ -215,6 +224,17 @@ export async function fetchTeams(
   const { data, count, error } = await query;
 
   if (error) {
+    if (error.code === "PGRST103" || error.code === "22P02") {
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 1,
+        from: 0,
+        to: 0,
+      };
+    }
     console.error("Error fetching teams from Supabase:", error);
     throw new Error(error.message || "Failed to fetch teams.");
   }
@@ -354,8 +374,24 @@ export async function bulkCreateTeams(
   }
 
   const supabase = createClient();
+  const isUUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tournamentId);
+
+  let targetId = tournamentId;
+  if (!isUUID) {
+    const { data: tData } = await (supabase.from("tournaments") as any)
+      .select("id")
+      .or(`slug.eq.${tournamentId},name.ilike.%${tournamentId}%`)
+      .limit(1)
+      .maybeSingle();
+
+    if (tData?.id) {
+      targetId = tData.id;
+    }
+  }
+
   const insertRows = dtos.map((dto) => ({
-    tournament_id: tournamentId,
+    tournament_id: targetId,
     name: dto.name,
     short_name: dto.short_name.toUpperCase(),
     slug: dto.name
