@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS public.venues (
   short_name TEXT NOT NULL,
   location TEXT,
   capacity INT,
+  availability_start TIME,
+  availability_end TIME,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

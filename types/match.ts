@@ -18,6 +18,8 @@ export interface Venue {
   short_name: string;
   location: string | null;
   capacity: number | null;
+  availability_start: string | null;
+  availability_end: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
