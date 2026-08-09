@@ -65,26 +65,27 @@ export default function AdminSidebar() {
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 flex flex-col gap-1 scrollbar-thin">
         {ADMIN_NAV_ITEMS.map((item) => {
-          // Teams are tournament-scoped — resolve the href dynamically
+          // Teams & Draw are tournament-scoped — resolve the href dynamically
           const resolvedHref =
             item.label === "Teams" && currentTournament?.id
               ? `/admin/tournaments/${currentTournament.id}/teams`
+              : item.label === "Draw" && currentTournament?.id
+              ? `/admin/tournaments/${currentTournament.id}/draw`
               : item.href;
 
           // Active detection — each label owns its path segment exclusively.
-          // Teams owns any path containing /teams (even under /tournaments/[id]/teams).
-          // Tournaments is only active on pure tournament routes, NOT on teams sub-routes.
           let active = false;
           if (item.href === "/admin") {
             active = pathname === "/admin";
           } else if (item.label === "Teams") {
             active = pathname.includes("/teams");
+          } else if (item.label === "Draw") {
+            active = pathname.includes("/draw");
           } else if (item.label === "Tournaments") {
-            // Active on /admin/tournaments and /admin/tournaments/[id] but NOT when
-            // a more-specific item (Teams) owns the path.
             active =
               pathname.startsWith("/admin/tournaments") &&
-              !pathname.includes("/teams");
+              !pathname.includes("/teams") &&
+              !pathname.includes("/draw");
           } else {
             active = pathname.startsWith(item.href);
           }

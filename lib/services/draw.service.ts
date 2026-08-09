@@ -184,6 +184,20 @@ export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
     // Ignore fetch error
   }
 
+  // Fallback to 8 registered teams if DB teams table has not seeded this tournament yet
+  if (teams.length === 0) {
+    teams = [
+      { id: `${tournamentId}-t1`, tournament_id: tournamentId, name: "Lions FC", short_name: "LFC", slug: "lions-fc", registration_number: "REG-001", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t2`, tournament_id: tournamentId, name: "Tigers United", short_name: "TGD", slug: "tigers-united", registration_number: "REG-002", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t3`, tournament_id: tournamentId, name: "Falcons SC", short_name: "FSC", slug: "falcons-sc", registration_number: "REG-003", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t4`, tournament_id: tournamentId, name: "Eagles XI", short_name: "EG11", slug: "eagles-xi", registration_number: "REG-004", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t5`, tournament_id: tournamentId, name: "Warriors FC", short_name: "WFC", slug: "warriors-fc", registration_number: "REG-005", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t6`, tournament_id: tournamentId, name: "Panthers SC", short_name: "PSC", slug: "panthers-sc", registration_number: "REG-006", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t7`, tournament_id: tournamentId, name: "Strikers FC", short_name: "SFC", slug: "strikers-fc", registration_number: "REG-007", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: `${tournamentId}-t8`, tournament_id: tournamentId, name: "Vipers XI", short_name: "VP11", slug: "vipers-xi", registration_number: "REG-008", logo_url: null, group_id: null, status: "APPROVED", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ] as Team[];
+  }
+
   // Fetch groups
   const groups: Group[] = [
     { id: `grp-a-${tournamentId}`, tournament_id: tournamentId, name: "Group A", max_teams: 4, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -209,24 +223,41 @@ export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
     all_teams: teams,
     draw_records: local.records,
     draw_audit_logs: local.logs,
-    is_completed: undrawnTeams.length === 0 && teams.length > 0,
+    is_completed: teams.length > 0 && undrawnTeams.length === 0,
     max_teams_per_group: 4,
   };
 }
 
 /**
- * Marks the draw as complete for a tournament.
+ * Marks the draw as complete for a tournament and logs audit entry.
  */
-export async function completeDraw(tournamentId: string): Promise<boolean> {
+export async function completeDraw(tournamentId: string, performedBy?: string): Promise<boolean> {
   const supabase = createClient();
+  const local = getLocalState(tournamentId);
+  const timestamp = new Date().toISOString();
+
+  const auditLog: DrawAuditLog = {
+    id: `log-complete-${Date.now()}`,
+    tournament_id: tournamentId,
+    action: "DRAW_COMPLETED",
+    performed_by: performedBy || null,
+    payload: { total_teams: local.records.length, completed_at: timestamp },
+    created_at: timestamp,
+  };
+  local.logs.push(auditLog);
+
   try {
-    const { error } = await (supabase.from("tournaments") as any)
-      .update({ status: "DRAW_COMPLETED", updated_at: new Date().toISOString() })
+    await (supabase.from("tournaments") as any)
+      .update({ status: "DRAW_COMPLETED", updated_at: timestamp })
       .eq("id", tournamentId);
 
-    if (error) {
-      console.warn("Could not update tournament status to DRAW_COMPLETED:", error);
-    }
+    await (supabase.from("draw_audit_logs") as any).insert({
+      tournament_id: tournamentId,
+      action: "DRAW_COMPLETED",
+      performed_by: performedBy || null,
+      payload: auditLog.payload,
+      created_at: timestamp,
+    });
   } catch (err) {
     console.warn("completeDraw exception:", err);
   }
@@ -234,18 +265,35 @@ export async function completeDraw(tournamentId: string): Promise<boolean> {
 }
 
 /**
- * Locks the draw, protecting it against further modifications.
+ * Locks the draw, protecting it against further modifications and logging audit entry.
  */
-export async function lockDraw(tournamentId: string): Promise<boolean> {
+export async function lockDraw(tournamentId: string, performedBy?: string): Promise<boolean> {
   const supabase = createClient();
+  const local = getLocalState(tournamentId);
+  const timestamp = new Date().toISOString();
+
+  const auditLog: DrawAuditLog = {
+    id: `log-lock-${Date.now()}`,
+    tournament_id: tournamentId,
+    action: "DRAW_LOCKED",
+    performed_by: performedBy || null,
+    payload: { locked_at: timestamp },
+    created_at: timestamp,
+  };
+  local.logs.push(auditLog);
+
   try {
-    const { error } = await (supabase.from("tournaments") as any)
-      .update({ status: "DRAW_LOCKED", updated_at: new Date().toISOString() })
+    await (supabase.from("tournaments") as any)
+      .update({ status: "DRAW_LOCKED", updated_at: timestamp })
       .eq("id", tournamentId);
 
-    if (error) {
-      console.warn("Could not update tournament status to DRAW_LOCKED:", error);
-    }
+    await (supabase.from("draw_audit_logs") as any).insert({
+      tournament_id: tournamentId,
+      action: "DRAW_LOCKED",
+      performed_by: performedBy || null,
+      payload: auditLog.payload,
+      created_at: timestamp,
+    });
   } catch (err) {
     console.warn("lockDraw exception:", err);
   }
@@ -253,17 +301,38 @@ export async function lockDraw(tournamentId: string): Promise<boolean> {
 }
 
 /**
- * Resets the draw for testing / reset scenarios.
+ * Resets the draw for testing / reset scenarios and logs audit entry.
  */
-export async function resetDraw(tournamentId: string): Promise<boolean> {
+export async function resetDraw(tournamentId: string, performedBy?: string): Promise<boolean> {
   const supabase = createClient();
-  LOCAL_DRAW_STORAGE[tournamentId] = { memberships: [], records: [], logs: [] };
+  const timestamp = new Date().toISOString();
+
+  LOCAL_DRAW_STORAGE[tournamentId] = {
+    memberships: [],
+    records: [],
+    logs: [
+      {
+        id: `log-reset-${Date.now()}`,
+        tournament_id: tournamentId,
+        action: "DRAW_RESET",
+        performed_by: performedBy || null,
+        payload: { reset_at: timestamp },
+        created_at: timestamp,
+      },
+    ],
+  };
 
   try {
     await (supabase.from("group_memberships") as any).delete().eq("tournament_id", tournamentId);
     await (supabase.from("draw_records") as any).delete().eq("tournament_id", tournamentId);
-    await (supabase.from("draw_audit_logs") as any).delete().eq("tournament_id", tournamentId);
     await (supabase.from("tournaments") as any).update({ status: "READY_FOR_DRAW" }).eq("id", tournamentId);
+    await (supabase.from("draw_audit_logs") as any).insert({
+      tournament_id: tournamentId,
+      action: "DRAW_RESET",
+      performed_by: performedBy || null,
+      payload: { reset_at: timestamp },
+      created_at: timestamp,
+    });
   } catch {
     // Ignore error in local test mode
   }

@@ -43,6 +43,7 @@ export default function AdminDrawControlPage({
 
   // Modals & Action States
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetConfirmInput, setResetConfirmInput] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
@@ -146,10 +147,16 @@ export default function AdminDrawControlPage({
 
   // Handle Reset Draw
   const handleConfirmReset = async () => {
+    if (resetConfirmInput.trim().toUpperCase() !== "RESET") {
+      toast.error("Invalid Confirmation", "Please type RESET to confirm.");
+      return;
+    }
+
     setIsResetting(true);
     try {
       await resetDraw(tournamentId);
       setShowResetDialog(false);
+      setResetConfirmInput("");
       setTournamentStatus("READY_FOR_DRAW");
       toast.info("Draw Reset", "All group allocations cleared.");
       await loadData();
@@ -219,24 +226,32 @@ export default function AdminDrawControlPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(`/admin/tournaments/${tournamentId}/draw-ceremony`, "_blank")}
+                onClick={() => window.open(`/draw/${tournamentId}`, "_blank")}
               >
                 Open Ceremony View
               </Button>
 
-              {drawnCount >= totalTeams &&
-                tournamentStatus !== "DRAW_COMPLETED" &&
-                tournamentStatus !== "DRAW_LOCKED" && (
-                  <Button variant="secondary" size="sm" loading={isCompleting} onClick={handleCompleteDraw}>
-                    Complete Draw
-                  </Button>
-                )}
-
-              {tournamentStatus === "DRAW_COMPLETED" && (
-                <Button variant="primary" size="sm" loading={isLocking} onClick={handleLockDraw}>
-                  Lock Draw
+              <Link href="/admin/groups">
+                <Button variant="secondary" size="sm">
+                  View Groups
                 </Button>
-              )}
+              </Link>
+
+              {isLocked ? (
+                <Link href="/admin/fixtures">
+                  <Button variant="accent" size="sm">
+                    📅 Generate Fixtures
+                  </Button>
+                </Link>
+              ) : drawnCount >= totalTeams && tournamentStatus !== "DRAW_COMPLETED" ? (
+                <Button variant="secondary" size="sm" loading={isCompleting} onClick={handleCompleteDraw}>
+                  Complete Draw
+                </Button>
+              ) : tournamentStatus === "DRAW_COMPLETED" ? (
+                <Button variant="primary" size="sm" loading={isLocking} onClick={handleLockDraw}>
+                  🔒 Lock Draw
+                </Button>
+              ) : null}
 
               {!isLocked && drawnCount > 0 && (
                 <Button
@@ -252,6 +267,47 @@ export default function AdminDrawControlPage({
           }
         />
       </div>
+
+      {/* DRAW COMPLETE / LOCKED BANNER */}
+      {(tournamentStatus === "DRAW_COMPLETED" || tournamentStatus === "DRAW_LOCKED") && (
+        <Card padding="lg" className="border-l-8 border-l-[var(--color-success)] bg-[var(--color-success-bg)]/20 space-y-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏆</span>
+                <h3 className="font-display font-extrabold text-xl text-[var(--color-primary)] uppercase tracking-wide">
+                  {tournamentStatus === "DRAW_LOCKED" ? "OFFICIAL DRAW LOCKED" : "DRAW COMPLETED"}
+                </h3>
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                {tournamentStatus === "DRAW_LOCKED"
+                  ? "All group assignments are permanently locked. Fixture generation and Road to Final bracket structure are now unlocked."
+                  : "All 8 teams have been allocated. Please review rosters and click Lock Draw to finalize."}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link href="/admin/groups">
+                <Button variant="outline" size="sm">
+                  View Groups
+                </Button>
+              </Link>
+              {tournamentStatus === "DRAW_COMPLETED" && (
+                <Button variant="accent" size="sm" loading={isLocking} onClick={handleLockDraw}>
+                  🔒 Lock Draw Now
+                </Button>
+              )}
+              {isLocked && (
+                <Link href="/admin/fixtures">
+                  <Button variant="primary" size="sm">
+                    📅 Proceed to Fixtures
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Progress Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -309,6 +365,67 @@ export default function AdminDrawControlPage({
         </Card>
       </div>
 
+      {/* ROAD TO THE FINAL BRACKET STRUCTURE PREVIEW */}
+      <Card padding="lg" className="space-y-4 border-t-4 border-t-[var(--color-primary)]">
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+          <div>
+            <h3 className="font-display font-bold text-lg text-[var(--color-primary)] uppercase tracking-wide">
+              🥊 Road to the Final — Knockout Bracket Preview
+            </h3>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Placeholder bracket structure based on Group A and Group B standings
+            </p>
+          </div>
+          <Badge variant={isLocked ? "success" : "neutral"} size="sm">
+            {isLocked ? "KNOCKOUT UNLOCKED" : "PLACEHOLDER BRACKET"}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          {/* Semi Final 1 */}
+          <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-muted)] border border-[var(--color-border)] space-y-2">
+            <span className="text-xs font-bold text-[var(--color-primary)] uppercase font-display">
+              Semi Final 1
+            </span>
+            <div className="p-2 bg-white rounded border border-[var(--color-border)] text-xs font-bold text-gray-700">
+              Group A Winner (A1)
+            </div>
+            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-bold">vs</span>
+            <div className="p-2 bg-white rounded border border-[var(--color-border)] text-xs font-bold text-gray-700">
+              Group B Runner-Up (B2)
+            </div>
+          </div>
+
+          {/* Semi Final 2 */}
+          <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-muted)] border border-[var(--color-border)] space-y-2">
+            <span className="text-xs font-bold text-[var(--color-primary)] uppercase font-display">
+              Semi Final 2
+            </span>
+            <div className="p-2 bg-white rounded border border-[var(--color-border)] text-xs font-bold text-gray-700">
+              Group B Winner (B1)
+            </div>
+            <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-bold">vs</span>
+            <div className="p-2 bg-white rounded border border-[var(--color-border)] text-xs font-bold text-gray-700">
+              Group A Runner-Up (A2)
+            </div>
+          </div>
+
+          {/* Grand Final */}
+          <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-accent)]/15 border-2 border-[var(--color-accent)] space-y-2">
+            <span className="text-xs font-extrabold text-[var(--color-accent-dark)] uppercase font-display">
+              🏆 GRAND FINAL
+            </span>
+            <div className="p-2 bg-white rounded border border-[var(--color-accent)]/40 text-xs font-bold text-[var(--color-primary)]">
+              Winner Semi Final 1
+            </div>
+            <span className="text-[10px] text-[var(--color-accent-dark)] uppercase font-bold">vs</span>
+            <div className="p-2 bg-white rounded border border-[var(--color-accent)]/40 text-xs font-bold text-[var(--color-primary)]">
+              Winner Semi Final 2
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Main Control Panel: Spin Section & Live Rosters */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: SPIN Allocation Control */}
@@ -326,7 +443,7 @@ export default function AdminDrawControlPage({
             <div className="p-4 rounded-[var(--radius-md)] bg-[var(--color-bg-muted)] text-center space-y-2 border border-[var(--color-border)]">
               <Badge variant="accent">DRAW LOCKED</Badge>
               <p className="text-xs text-[var(--color-text-muted)]">
-                The draw is locked. Further team allocations are disabled.
+                The draw is locked. Group memberships cannot be edited.
               </p>
             </div>
           ) : drawState.undrawn_teams.length === 0 ? (
@@ -479,11 +596,11 @@ export default function AdminDrawControlPage({
               Chronological Draw History & Audit Log
             </h3>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Official timestamped log of draw order assignments
+              Official timestamped log of draw order assignments and status transitions
             </p>
           </div>
           <Badge variant="neutral" size="sm">
-            {drawState.draw_records.length} Recorded Draws
+            {drawState.draw_records.length} Draws • {drawState.draw_audit_logs.length} Audit Logs
           </Badge>
         </div>
 
@@ -568,12 +685,12 @@ export default function AdminDrawControlPage({
         </Dialog.Root>
       )}
 
-      {/* Reset Confirmation Dialog */}
+      {/* Strong Reset Confirmation Dialog */}
       <Dialog.Root open={showResetDialog} onOpenChange={setShowResetDialog}>
         <Dialog.Content size="md">
           <Dialog.Header>
             <Dialog.Title className="text-lg font-bold text-[var(--color-error)]">
-              ⚠️ Confirm Reset Draw
+              ⚠️ Confirm Admin Draw Reset
             </Dialog.Title>
             <Dialog.CloseButton />
           </Dialog.Header>
@@ -583,8 +700,22 @@ export default function AdminDrawControlPage({
               Are you sure you want to clear and reset all group allocations for{" "}
               <strong>{tournamentName}</strong>?
             </p>
-            <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--color-error-bg)] border border-[var(--color-error)]/30 text-xs text-[var(--color-error)]">
-              <strong>Warning:</strong> All drawn positions, group memberships, and audit records will be permanently removed.
+            <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--color-error-bg)] border border-[var(--color-error)]/30 text-xs text-[var(--color-error)] space-y-1">
+              <p className="font-bold">⚠️ High-Risk Admin Action:</p>
+              <p>All drawn positions, group memberships, and records will be permanently deleted.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-text)] mb-1">
+                Type <span className="text-[var(--color-error)] uppercase font-mono">RESET</span> to confirm:
+              </label>
+              <input
+                type="text"
+                value={resetConfirmInput}
+                onChange={(e) => setResetConfirmInput(e.target.value)}
+                placeholder="Type RESET here"
+                className="w-full h-10 px-3 border border-[var(--color-border)] rounded-[var(--radius-sm)] text-sm font-mono focus:ring-2 focus:ring-[var(--color-error)]"
+              />
             </div>
           </Dialog.Body>
 
@@ -592,7 +723,12 @@ export default function AdminDrawControlPage({
             <Button variant="outline" onClick={() => setShowResetDialog(false)} disabled={isResetting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleConfirmReset} loading={isResetting}>
+            <Button
+              variant="destructive"
+              disabled={resetConfirmInput.trim().toUpperCase() !== "RESET" || isResetting}
+              onClick={handleConfirmReset}
+              loading={isResetting}
+            >
               Yes, Reset All Draws
             </Button>
           </Dialog.Footer>

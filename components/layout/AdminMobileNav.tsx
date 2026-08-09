@@ -142,6 +142,8 @@ export default function AdminMobileNav() {
                 const resolvedHref =
                   item.label === "Teams" && currentTournament?.id
                     ? `/admin/tournaments/${currentTournament.id}/teams`
+                    : item.label === "Draw" && currentTournament?.id
+                    ? `/admin/tournaments/${currentTournament.id}/draw`
                     : item.href;
 
                 let active = false;
@@ -149,10 +151,13 @@ export default function AdminMobileNav() {
                   active = pathname === "/admin";
                 } else if (item.label === "Teams") {
                   active = pathname.includes("/teams");
+                } else if (item.label === "Draw") {
+                  active = pathname.includes("/draw");
                 } else if (item.label === "Tournaments") {
                   active =
                     pathname.startsWith("/admin/tournaments") &&
-                    !pathname.includes("/teams");
+                    !pathname.includes("/teams") &&
+                    !pathname.includes("/draw");
                 } else {
                   active = pathname.startsWith(item.href);
                 }

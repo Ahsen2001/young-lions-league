@@ -22,6 +22,7 @@ import { runVenueTests } from "../lib/services/__tests__/venue.test";
 import { runTeamTests } from "../lib/services/__tests__/team.test";
 import { runTeamImportTests } from "../lib/services/__tests__/team-import.test";
 import { runDrawEngineTests } from "../lib/services/__tests__/draw.test";
+import { runDrawLifecycleTests } from "../lib/services/__tests__/draw_lifecycle.test";
 
 async function main() {
   console.log("=== Running Young Lions League System Unit Tests ===");
@@ -32,6 +33,7 @@ async function main() {
   const teamResults = await runTeamTests();
   const importResults = await runTeamImportTests();
   const drawResults = await runDrawEngineTests();
+  const lifecycleResults = await runDrawLifecycleTests();
 
   const allResults = [
     ...valResults,
@@ -40,6 +42,7 @@ async function main() {
     ...teamResults,
     ...importResults,
     ...drawResults,
+    ...lifecycleResults,
   ];
   let allPassed = true;
 
