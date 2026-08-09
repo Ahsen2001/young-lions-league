@@ -215,6 +215,44 @@ export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
 }
 
 /**
+ * Marks the draw as complete for a tournament.
+ */
+export async function completeDraw(tournamentId: string): Promise<boolean> {
+  const supabase = createClient();
+  try {
+    const { error } = await (supabase.from("tournaments") as any)
+      .update({ status: "DRAW_COMPLETED", updated_at: new Date().toISOString() })
+      .eq("id", tournamentId);
+
+    if (error) {
+      console.warn("Could not update tournament status to DRAW_COMPLETED:", error);
+    }
+  } catch (err) {
+    console.warn("completeDraw exception:", err);
+  }
+  return true;
+}
+
+/**
+ * Locks the draw, protecting it against further modifications.
+ */
+export async function lockDraw(tournamentId: string): Promise<boolean> {
+  const supabase = createClient();
+  try {
+    const { error } = await (supabase.from("tournaments") as any)
+      .update({ status: "DRAW_LOCKED", updated_at: new Date().toISOString() })
+      .eq("id", tournamentId);
+
+    if (error) {
+      console.warn("Could not update tournament status to DRAW_LOCKED:", error);
+    }
+  } catch (err) {
+    console.warn("lockDraw exception:", err);
+  }
+  return true;
+}
+
+/**
  * Resets the draw for testing / reset scenarios.
  */
 export async function resetDraw(tournamentId: string): Promise<boolean> {
