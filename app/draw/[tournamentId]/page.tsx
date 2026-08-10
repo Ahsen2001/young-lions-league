@@ -4,6 +4,7 @@ import { useState, useEffect, use, useCallback } from "react";
 import {
   fetchDrawState,
   drawSingleTeam,
+  lockDraw,
   type DrawState,
   type DrawSingleTeamResult,
 } from "@/lib/services/draw.service";
@@ -288,14 +289,37 @@ export default function OfficialDrawCeremonyPage({
         {/* CENTER SPIN CONTROL & BALL REVEAL */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center text-center space-y-6 px-2">
           {isCompleted ? (
-            <div className="bg-[#A0AF2A]/20 border-2 border-[#A0AF2A] rounded-2xl p-6 text-center space-y-3 shadow-2xl">
+            <div className="bg-[#A0AF2A]/20 border-2 border-[#A0AF2A] rounded-2xl p-6 text-center space-y-4 shadow-2xl">
               <div className="text-4xl">🏆</div>
-              <h3 className="text-2xl font-extrabold font-display text-[#E1B32C]">
-                DRAW CEREMONY COMPLETED!
-              </h3>
-              <p className="text-xs text-white/80 max-w-xs mx-auto">
-                All 8 teams have been officially allocated to Group A and Group B.
-              </p>
+              <div>
+                <h3 className="text-2xl font-extrabold font-display text-[#E1B32C]">
+                  DRAW CEREMONY COMPLETED!
+                </h3>
+                <p className="text-xs text-white/90 max-w-xs mx-auto mt-1">
+                  All 8 teams have been officially allocated into Group A and Group B!
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await lockDraw(tournamentId, "Ceremony Admin");
+                      toast.success(
+                        "Groups Saved & Locked!",
+                        "Teams successfully grouped and saved to Group A and Group B."
+                      );
+                      window.location.href = "/admin/groups";
+                    } catch (err: any) {
+                      toast.error("Lock Failed", err.message);
+                    }
+                  }}
+                  className="bg-[#E1B32C] hover:bg-[#fcd34d] text-[#234F2D] font-extrabold px-6 py-3 rounded-xl text-sm uppercase tracking-wider shadow-xl transition-all transform active:scale-95 cursor-pointer font-display"
+                >
+                  🔒 LOCK & SAVE GROUPS
+                </button>
+              </div>
             </div>
           ) : (
             <>

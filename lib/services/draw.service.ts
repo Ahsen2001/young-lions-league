@@ -27,7 +27,7 @@ export interface DrawState {
   max_teams_per_group: number;
 }
 
-// In-memory fallback simulation state for offline / test runner environments
+// In-memory fallback simulation state
 const LOCAL_DRAW_STORAGE: Record<
   string,
   {
@@ -48,6 +48,35 @@ function getLocalState(tournamentId: string) {
   return LOCAL_DRAW_STORAGE[tournamentId];
 }
 
+// Browser localStorage helpers for refresh persistence
+function getBrowserStorage(tournamentId: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`yl_draw_storage_${tournamentId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBrowserStorage(tournamentId: string, data: any) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`yl_draw_storage_${tournamentId}`, JSON.stringify(data));
+  } catch {
+    // Ignore storage write error
+  }
+}
+
+function clearBrowserStorage(tournamentId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(`yl_draw_storage_${tournamentId}`);
+  } catch {
+    // Ignore error
+  }
+}
+
 /**
  * Executes a single team draw for Group A / Group B.
  * Database/Server determines and persists the result before visual animation.
@@ -59,7 +88,18 @@ export async function drawSingleTeam(
 ): Promise<DrawSingleTeamResult> {
   const supabase = createClient();
 
-  // 1. Try Supabase RPC Function (Primary Atomic Server Operation)
+  // 1. Sync local state from browser storage if present
+  const local = getLocalState(tournamentId);
+  const browserData = getBrowserStorage(tournamentId);
+  if (browserData) {
+    if (browserData.records?.length > local.records.length) {
+      local.records = browserData.records;
+      local.memberships = browserData.memberships;
+      local.logs = browserData.logs;
+    }
+  }
+
+  // 2. Try Supabase RPC Function (Primary Atomic Server Operation)
   try {
     const { data, error } = await (supabase.rpc as any)("execute_draw_single_team", {
       p_tournament_id: tournamentId,
@@ -68,22 +108,34 @@ export async function drawSingleTeam(
     });
 
     if (!error && data && data.success) {
+      // Sync DB result to local memory & browser storage
+      local.records.push({
+        id: `drw-${data.drawn_position}`,
+        tournament_id: tournamentId,
+        team_id: teamId,
+        group_id: data.group_id,
+        pot_number: 1,
+        drawn_position: data.drawn_position,
+        drawn_by: drawnBy || null,
+        drawn_at: data.drawn_at,
+      });
+
+      local.memberships.push({
+        tournament_id: tournamentId,
+        group_id: data.group_id,
+        team_id: teamId,
+        seed: data.drawn_position,
+        allocated_at: data.drawn_at,
+      });
+
+      saveBrowserStorage(tournamentId, local);
       return data as DrawSingleTeamResult;
     }
-
-    if (error && !error.message.includes("function public.execute_draw_single_team") && !error.message.includes("schema")) {
-      throw new Error(error.message);
-    }
   } catch (err: any) {
-    if (err.message && !err.message.includes("function") && !err.message.includes("RPC") && !err.message.includes("schema")) {
-      throw err;
-    }
+    console.warn("RPC call fallback to atomic handler:", err?.message);
   }
 
-  // 2. Fallback Atomic Handler (For Local Unit Tests / Memory Environments)
-  const local = getLocalState(tournamentId);
-
-  // Check duplicate
+  // 3. Fallback Atomic Handler (For Local Unit Tests / Memory / Browser Storage Environments)
   const alreadyDrawn = local.records.some((r) => r.team_id === teamId);
   if (alreadyDrawn) {
     throw new Error(`Team has already been drawn in this tournament.`);
@@ -108,7 +160,6 @@ export async function drawSingleTeam(
     targetGroupId = groupAId;
     targetGroupName = "Group A";
   } else {
-    // 50/50 Random allocation
     if (Math.random() < 0.5) {
       targetGroupId = groupAId;
       targetGroupName = "Group A";
@@ -151,6 +202,23 @@ export async function drawSingleTeam(
     created_at: timestamp,
   });
 
+  // Save to browser storage for refresh persistence
+  saveBrowserStorage(tournamentId, local);
+
+  // Try direct Supabase DB Table insert for persistent backend state
+  try {
+    await (supabase.from("draw_records") as any).insert(record);
+    await (supabase.from("group_memberships") as any).insert({
+      tournament_id: tournamentId,
+      group_id: targetGroupId,
+      team_id: teamId,
+      seed: position,
+      allocated_at: timestamp,
+    });
+  } catch {
+    // Ignore table insert error in fallback mode
+  }
+
   return {
     success: true,
     tournament_id: tournamentId,
@@ -160,24 +228,68 @@ export async function drawSingleTeam(
     group_name: targetGroupName,
     drawn_position: position,
     drawn_at: timestamp,
-    is_draw_completed: false,
+    is_draw_completed: local.records.length >= 8,
   };
 }
 
 /**
- * Fetches the full live draw state for a tournament.
+ * Fetches the full live draw state for a tournament with database + browser storage persistence.
  */
 export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
   const supabase = createClient();
   const local = getLocalState(tournamentId);
 
-  // Fetch tournament teams
+  // 1. Sync browser storage to local memory
+  const browserData = getBrowserStorage(tournamentId);
+  if (browserData && browserData.records?.length > local.records.length) {
+    local.records = browserData.records;
+    local.memberships = browserData.memberships;
+    local.logs = browserData.logs;
+  }
+
+  // 2. Fetch tournament status from Supabase
+  let dbStatus: TournamentStatus = "READY_FOR_DRAW";
+  try {
+    const { data: tourney } = await (supabase.from("tournaments") as any)
+      .select("status")
+      .eq("id", tournamentId)
+      .single();
+    if (tourney?.status) {
+      dbStatus = tourney.status;
+    }
+  } catch {
+    // Ignore error
+  }
+
+  // 3. Fetch draw records & group memberships from Supabase DB
+  try {
+    const { data: dbRecords } = await (supabase.from("draw_records") as any)
+      .select("*")
+      .eq("tournament_id", tournamentId)
+      .order("drawn_position", { ascending: true });
+
+    if (dbRecords && dbRecords.length > 0) {
+      local.records = dbRecords as DrawRecord[];
+    }
+
+    const { data: dbMemberships } = await (supabase.from("group_memberships") as any)
+      .select("*")
+      .eq("tournament_id", tournamentId);
+
+    if (dbMemberships && dbMemberships.length > 0) {
+      local.memberships = dbMemberships;
+    }
+  } catch {
+    // Ignore error
+  }
+
+  // 4. Fetch tournament teams
   let teams: Team[] = [];
   try {
     const { data: tData } = await (supabase.from("teams") as any)
       .select("*")
       .eq("tournament_id", tournamentId);
-    if (tData) {
+    if (tData && tData.length > 0) {
       teams = tData as Team[];
     }
   } catch {
@@ -198,6 +310,15 @@ export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
     ] as Team[];
   }
 
+  // Sync team names into records if missing
+  local.records = local.records.map((r) => {
+    const t = teams.find((team) => team.id === r.team_id);
+    return t ? { ...r, team_name: t.name } : r;
+  });
+
+  // Save back to browser storage
+  saveBrowserStorage(tournamentId, local);
+
   // Fetch groups
   const groups: Group[] = [
     { id: `grp-a-${tournamentId}`, tournament_id: tournamentId, name: "Group A", max_teams: 4, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -213,9 +334,16 @@ export async function fetchDrawState(tournamentId: string): Promise<DrawState> {
   const groupATeams = teams.filter((t) => groupATeamIds.has(t.id));
   const groupBTeams = teams.filter((t) => groupBTeamIds.has(t.id));
 
+  const finalStatus: TournamentStatus =
+    dbStatus === "DRAW_LOCKED" || dbStatus === "DRAW_COMPLETED"
+      ? dbStatus
+      : local.records.length > 0
+      ? "DRAW_IN_PROGRESS"
+      : "READY_FOR_DRAW";
+
   return {
     tournament_id: tournamentId,
-    tournament_status: local.records.length > 0 ? "DRAW_IN_PROGRESS" : "READY_FOR_DRAW",
+    tournament_status: finalStatus,
     groups,
     group_a_teams: groupATeams,
     group_b_teams: groupBTeams,
@@ -245,6 +373,7 @@ export async function completeDraw(tournamentId: string, performedBy?: string): 
     created_at: timestamp,
   };
   local.logs.push(auditLog);
+  saveBrowserStorage(tournamentId, local);
 
   try {
     await (supabase.from("tournaments") as any)
@@ -265,7 +394,7 @@ export async function completeDraw(tournamentId: string, performedBy?: string): 
 }
 
 /**
- * Locks the draw, protecting it against further modifications and logging audit entry.
+ * Locks the draw, saves team group memberships to the database, and logs audit entry.
  */
 export async function lockDraw(tournamentId: string, performedBy?: string): Promise<boolean> {
   const supabase = createClient();
@@ -281,11 +410,19 @@ export async function lockDraw(tournamentId: string, performedBy?: string): Prom
     created_at: timestamp,
   };
   local.logs.push(auditLog);
+  saveBrowserStorage(tournamentId, local);
 
   try {
     await (supabase.from("tournaments") as any)
       .update({ status: "DRAW_LOCKED", updated_at: timestamp })
       .eq("id", tournamentId);
+
+    // Save team group_id assignments in teams table
+    for (const membership of local.memberships) {
+      await (supabase.from("teams") as any)
+        .update({ group_id: membership.group_id, updated_at: timestamp })
+        .eq("id", membership.team_id);
+    }
 
     await (supabase.from("draw_audit_logs") as any).insert({
       tournament_id: tournamentId,
@@ -322,10 +459,13 @@ export async function resetDraw(tournamentId: string, performedBy?: string): Pro
     ],
   };
 
+  clearBrowserStorage(tournamentId);
+
   try {
     await (supabase.from("group_memberships") as any).delete().eq("tournament_id", tournamentId);
     await (supabase.from("draw_records") as any).delete().eq("tournament_id", tournamentId);
     await (supabase.from("tournaments") as any).update({ status: "READY_FOR_DRAW" }).eq("id", tournamentId);
+    await (supabase.from("teams") as any).update({ group_id: null }).eq("tournament_id", tournamentId);
     await (supabase.from("draw_audit_logs") as any).insert({
       tournament_id: tournamentId,
       action: "DRAW_RESET",
